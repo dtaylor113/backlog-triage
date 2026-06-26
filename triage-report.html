@@ -140,10 +140,63 @@ th .resize-handle:hover, th .resize-handle.active { background: #60a5fa; }
   color: #6b7280; font-size: 16px;
 }
 .info-popup .close-btn:hover { color: #e5e7eb; }
+
+/* Close mode (hidden until triple-click unlock) */
+.close-col { display: none; }
+body.close-mode .close-col { display: table-cell; }
+.close-col input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: #ef4444; }
+.close-footer {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
+  background: #1f2937; border-top: 2px solid #ef4444; padding: 10px 24px;
+  align-items: center; justify-content: space-between; gap: 16px;
+}
+body.close-mode .close-footer.has-selection { display: flex; }
+.close-footer .close-count { color: #e5e7eb; font-weight: 600; }
+.close-footer .close-btn-action {
+  background: #ef4444; color: #fff; border: none; border-radius: 6px;
+  padding: 8px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.close-footer .close-btn-action:hover { background: #dc2626; }
+.close-modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1100;
+  background: rgba(0,0,0,0.7); align-items: center; justify-content: center;
+}
+.close-modal-overlay.visible { display: flex; }
+.close-modal {
+  background: #1f2937; border: 1px solid #4b5563; border-radius: 10px;
+  padding: 24px 28px; max-width: 600px; width: 90vw; max-height: 70vh;
+  overflow-y: auto; color: #e5e7eb;
+}
+.close-modal h3 { margin-bottom: 12px; color: #ef4444; }
+.close-modal .close-modal-list { margin: 12px 0; font-size: 13px; }
+.close-modal .close-modal-list li { margin: 4px 0; }
+.close-modal .close-modal-actions { display: flex; gap: 12px; margin-top: 16px; justify-content: flex-end; }
+.close-modal .modal-cancel {
+  background: #374151; color: #e5e7eb; border: none; border-radius: 6px;
+  padding: 8px 18px; font-size: 14px; cursor: pointer;
+}
+.close-modal .modal-cancel:hover { background: #4b5563; }
+.close-modal .modal-confirm {
+  background: #ef4444; color: #fff; border: none; border-radius: 6px;
+  padding: 8px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.close-modal .modal-confirm:hover { background: #dc2626; }
+.unlock-indicator {
+  display: inline-flex; align-items: center; gap: 5px; margin-left: 12px;
+  font-size: 12px; color: #6b7280; cursor: default;
+}
+body.close-mode .unlock-indicator { color: #ef4444; }
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div class="close-footer" id="close-footer">
+  <span class="close-count">0 tickets selected</span>
+  <button class="close-btn-action" onclick="showCloseModal()">Close Selected</button>
+</div>
+<div class="close-modal-overlay" id="close-modal-overlay">
+  <div class="close-modal"></div>
+</div>
 <script src="triage-data.js"></script>
 <script>
 const D = window.TRIAGE_DATA;
@@ -173,8 +226,21 @@ function render() {
   const app = document.getElementById('app');
   let html = '';
 
-  html += `<h1>OCMUI Backlog Triage Report</h1>`;
+  html += `<h1>OCMUI Backlog Triage Report <span class="unlock-indicator" id="unlock-indicator">&#128274;</span></h1>`;
   html += `<div class="meta">Generated: ${new Date(D.meta.generated_at).toLocaleString()}</div>`;
+
+  // Weekly deltas (if previous run data exists)
+  if (D.meta.deltas && Object.keys(D.meta.deltas).length > 0) {
+    html += `<div style="margin:8px 0 12px; padding:8px 14px; background:#1a2332; border:1px solid #333; border-radius:6px; font-size:13px; display:flex; gap:16px; flex-wrap:wrap; align-items:center;">`;
+    html += `<span style="color:#9ca3af; font-weight:600;">Changes since last run:</span>`;
+    const labels = { open: 'Open', stale: 'Stale', frozen: 'Frozen', orphaned: 'Orphaned', obsolete: 'Obsolete', escalated: 'Escalated' };
+    Object.entries(D.meta.deltas).forEach(([key, d]) => {
+      const sign = d.diff > 0 ? '+' : '';
+      const color = d.diff < 0 ? '#22c55e' : d.diff > 0 ? '#ef4444' : '#9ca3af';
+      html += `<span style="color:${color};font-weight:600;">${labels[key] || key}: ${sign}${d.diff}</span>`;
+    });
+    html += `</div>`;
+  }
 
   // Ticket counts matching Jira board layout
   const allTickets = D.tickets || [];
@@ -320,6 +386,7 @@ function renderObsoleteTab() {
   html += `</div>`;
 
   html += `<table id="obsolete-table"><thead><tr>`;
+  html += `<th class="close-col" style="width:30px;"></th>`;
   const obsoleteHeaders = [
     {name: 'Type'},
     {name: 'Key'},
@@ -337,6 +404,7 @@ function renderObsoleteTab() {
 
   candidates.forEach(c => {
     html += `<tr data-confidence="${c.confidence}">`;
+    html += `<td class="close-col"><input type="checkbox" class="close-cb" data-key="${esc(c.key)}" onchange="updateCloseFooter()"></td>`;
     html += `<td>${esc(c.type)}</td>`;
     html += `<td class="nowrap">${jiraLink(c.key)}</td>`;
     html += `<td>${esc(c.summary)}</td>`;
@@ -462,7 +530,9 @@ function renderDuplicatesTab() {
       const numB = parseInt(b.key.split('-')[1]) || 0;
       return numA - numB;
     });
-    const childrenList = children.map(t => `${jiraLink(t.key)} - ${esc(t.summary)}`).join('<br>');
+    const childrenList = children.map(t =>
+      `<span class="close-col" style="display:none;"><input type="checkbox" class="close-cb" data-key="${esc(t.key)}" data-summary="${esc(t.summary)}" data-parent="${esc(parentKey)}" onchange="updateCloseFooter()"> </span>${jiraLink(t.key)} - ${esc(t.summary)}`
+    ).join('<br>');
     html += `<tr>`;
     html += `<td class="nowrap">${jiraLink(parentKey)}</td>`;
     html += `<td>${parentSummary}</td>`;
@@ -518,6 +588,7 @@ function renderCleanupTab() {
   html += `</div>`;
 
   html += `<table id="cleanup-table"><thead><tr>`;
+  html += `<th class="close-col" style="width:30px;"></th>`;
   ['Parent','Type','Summary','# Open Children','Closed'].forEach(h => {
     html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
   });
@@ -527,17 +598,18 @@ function renderCleanupTab() {
     const group = byParent[pk];
     const parentSummary = group.summary ? esc(group.summary) : '';
     const childRows = group.children.map(t =>
-      `<tr><td class="nowrap">${jiraLink(t.key)}</td><td>${esc(t.summary)}</td><td>${esc(t.type)}</td><td>${esc(t.status)}</td></tr>`
+      `<tr><td class="close-col"><input type="checkbox" class="close-cb" data-key="${esc(t.key)}" onchange="updateCloseFooter()"></td><td class="nowrap">${jiraLink(t.key)}</td><td>${esc(t.summary)}</td><td>${esc(t.type)}</td><td>${esc(t.status)}</td></tr>`
     ).join('');
 
     html += `<tr class="orphan-parent-row" onclick="this.classList.toggle('expanded');this.nextElementSibling.classList.toggle('visible');">`;
+    html += `<td class="close-col" onclick="event.stopPropagation();"><input type="checkbox" class="close-parent-cb" onchange="updateCloseFooter()"></td>`;
     html += `<td class="nowrap"><span class="orphan-toggle">&#9654;</span> ${jiraLink(pk)}</td>`;
     html += `<td>${esc(group.type)}</td>`;
     html += `<td>${parentSummary}</td>`;
     html += `<td style="color:#ef4444;font-weight:600;">${group.children.length}</td>`;
     html += `<td class="nowrap">${group.closedDate}</td>`;
     html += `</tr>`;
-    html += `<tr class="orphan-detail-row"><td colspan="5"><table class="orphan-child-table"><thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Status</th></tr></thead><tbody>${childRows}</tbody></table></td></tr>`;
+    html += `<tr class="orphan-detail-row"><td colspan="6"><table class="orphan-child-table"><thead><tr><th class="close-col" style="width:30px;"></th><th>Key</th><th>Summary</th><th>Type</th><th>Status</th></tr></thead><tbody>${childRows}</tbody></table></td></tr>`;
   });
 
   html += `</tbody></table></div>`;
@@ -918,6 +990,21 @@ document.addEventListener('click', (e) => {
     popup.querySelector('.close-btn').addEventListener('click', () => popup.classList.remove('visible'));
   }
 
+  // Close mode checkbox handling
+  const cb = e.target.closest('.close-cb');
+  if (cb) { e.stopPropagation(); updateCloseFooter(); return; }
+  const parentCb = e.target.closest('.close-parent-cb');
+  if (parentCb) {
+    e.stopPropagation();
+    const row = parentCb.closest('.orphan-parent-row');
+    const detail = row?.nextElementSibling;
+    if (detail) {
+      detail.querySelectorAll('.close-cb').forEach(c => { c.checked = parentCb.checked; });
+    }
+    updateCloseFooter();
+    return;
+  }
+
   // Clickable metric cards navigation
   const navCard = e.target.closest('.card-clickable');
   if (navCard) {
@@ -948,6 +1035,119 @@ document.addEventListener('click', (e) => {
     }
   }
 });
+// --- Triple-click unlock for close mode ---
+let tabClickCount = 0;
+let tabClickTimer = null;
+document.addEventListener('click', (e) => {
+  const tab = e.target.closest('.tab[data-tab]');
+  if (!tab) { tabClickCount = 0; return; }
+  tabClickCount++;
+  clearTimeout(tabClickTimer);
+  tabClickTimer = setTimeout(() => { tabClickCount = 0; }, 1200);
+  if (tabClickCount >= 3) {
+    tabClickCount = 0;
+    document.body.classList.toggle('close-mode');
+    const isActive = document.body.classList.contains('close-mode');
+    const indicator = document.getElementById('unlock-indicator');
+    if (indicator) indicator.innerHTML = isActive ? '&#128275; Close mode' : '&#128274;';
+    // Toggle inline duplicate checkboxes
+    document.querySelectorAll('#dup-table .close-col').forEach(el => {
+      el.style.display = isActive ? 'inline' : 'none';
+    });
+    updateCloseFooter();
+  }
+});
+
+// --- Close footer management ---
+function getSelectedTickets() {
+  const selected = [];
+  // Obsolete
+  document.querySelectorAll('#obsolete-table .close-cb:checked').forEach(cb => {
+    const row = cb.closest('tr');
+    const key = row?.querySelector('a')?.textContent || '';
+    const summary = row?.cells[3]?.textContent || '';
+    selected.push({ key, summary, category: 'obsolete', resolution: 'Obsolete', label: 'triage-closed-obsolete', reason: 'Obsolete candidate (stale references)' });
+  });
+  // Duplicates
+  document.querySelectorAll('#dup-table .close-cb:checked').forEach(cb => {
+    const key = cb.dataset.key || '';
+    const summary = cb.dataset.summary || '';
+    const parent = cb.dataset.parent || '';
+    selected.push({ key, summary, category: 'duplicate', resolution: 'Duplicate', label: 'triage-closed-duplicate', reason: `Duplicate under ${parent}` });
+  });
+  // Orphaned (children)
+  document.querySelectorAll('.orphan-child-table .close-cb:checked').forEach(cb => {
+    const row = cb.closest('tr');
+    const key = row?.querySelector('a')?.textContent || '';
+    const summary = row?.cells[2]?.textContent || '';
+    const parentRow = cb.closest('.orphan-detail-row')?.previousElementSibling;
+    const parentKey = parentRow?.querySelector('a')?.textContent || '';
+    selected.push({ key, summary, category: 'orphan', resolution: "Won't Do", label: 'triage-closed-orphan', reason: `Parent ${parentKey} closed` });
+  });
+  return selected;
+}
+
+function updateCloseFooter() {
+  const footer = document.getElementById('close-footer');
+  if (!footer) return;
+  const count = getSelectedTickets().length;
+  footer.classList.toggle('has-selection', count > 0);
+  const countEl = footer.querySelector('.close-count');
+  if (countEl) countEl.textContent = `${count} ticket${count !== 1 ? 's' : ''} selected`;
+}
+
+function showCloseModal() {
+  const selected = getSelectedTickets();
+  if (!selected.length) return;
+  const overlay = document.getElementById('close-modal-overlay');
+  const modal = overlay.querySelector('.close-modal');
+
+  const byCategory = { orphan: [], duplicate: [], obsolete: [] };
+  selected.forEach(s => byCategory[s.category].push(s));
+
+  let listHtml = '';
+  if (byCategory.orphan.length) {
+    listHtml += `<h4 style="color:#f59e0b;margin:8px 0 4px;">Orphaned → Resolution: Won't Do</h4><ul class="close-modal-list">`;
+    byCategory.orphan.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
+    listHtml += `</ul>`;
+  }
+  if (byCategory.duplicate.length) {
+    listHtml += `<h4 style="color:#a78bfa;margin:8px 0 4px;">Duplicate → Resolution: Duplicate</h4><ul class="close-modal-list">`;
+    byCategory.duplicate.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
+    listHtml += `</ul>`;
+  }
+  if (byCategory.obsolete.length) {
+    listHtml += `<h4 style="color:#9ca3af;margin:8px 0 4px;">Obsolete → Resolution: Obsolete</h4><ul class="close-modal-list">`;
+    byCategory.obsolete.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
+    listHtml += `</ul>`;
+  }
+
+  modal.innerHTML = `
+    <h3>Confirm Close — ${selected.length} ticket${selected.length !== 1 ? 's' : ''}</h3>
+    <p style="color:#9ca3af;font-size:13px;">These tickets will be closed with the listed resolutions. A <code>close-manifest.json</code> will be downloaded for processing.</p>
+    ${listHtml}
+    <div class="close-modal-actions">
+      <button class="modal-cancel" onclick="document.getElementById('close-modal-overlay').classList.remove('visible')">Cancel</button>
+      <button class="modal-confirm" onclick="downloadManifest()">Confirm &amp; Download Manifest</button>
+    </div>`;
+  overlay.classList.add('visible');
+}
+
+function downloadManifest() {
+  const selected = getSelectedTickets();
+  const manifest = {
+    generated_at: new Date().toISOString(),
+    items: selected.map(s => ({ key: s.key, resolution: s.resolution, label: s.label, reason: s.reason }))
+  };
+  const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'close-manifest.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('close-modal-overlay').classList.remove('visible');
+}
 </script>
 </body>
 </html>

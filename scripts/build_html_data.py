@@ -1,12 +1,23 @@
 #!/usr/bin/env python3
-"""Build triage-data.js from analysis outputs for the HTML dashboard."""
+"""Build triage-data.js from analysis outputs for the HTML dashboard.
 
+Also appends a metrics snapshot row to triage-log.csv for weekly tracking.
+"""
+
+import csv
 import json
 import time
+from datetime import datetime
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_FILE = BASE_DIR / "triage-data.js"
+LOG_FILE = BASE_DIR / "triage-log.csv"
+
+LOG_HEADERS = [
+    "date", "open", "stale", "frozen", "epics", "sprint",
+    "orphaned", "duplicates", "obsolete", "escalated",
+]
 
 
 def load_json(path):
@@ -16,26 +27,78 @@ def load_json(path):
         return json.load(f)
 
 
+def append_log(metrics):
+    """Append a metrics snapshot row to triage-log.csv."""
+    file_exists = LOG_FILE.exists()
+    with open(LOG_FILE, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=LOG_HEADERS)
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(metrics)
+    print(f"Appended metrics to: {LOG_FILE}")
+
+
+def load_previous_log():
+    """Load the most recent log entry for delta calculation."""
+    if not LOG_FILE.exists():
+        return None
+    with open(LOG_FILE) as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+    return rows[-1] if rows else None
+
+
 def main():
-    tickets = load_json(BASE_DIR / "tickets.json")
+    tickets_data = load_json(BASE_DIR / "tickets.json")
     duplicates = load_json(BASE_DIR / "duplicate_candidates.json")
     obsolete = load_json(BASE_DIR / "obsolete_candidates.json")
     priorities = load_json(BASE_DIR / "priority_scores.json")
 
+    all_tickets = tickets_data["tickets"] if tickets_data else []
+    stale_tickets = tickets_data.get("stale_tickets", []) if tickets_data else []
+    frozen_tickets = tickets_data.get("frozen_tickets", []) if tickets_data else []
+
+    # Compute metrics
+    epic_count = sum(1 for t in all_tickets if t.get("type") == "Epic")
+    sprint_count = sum(1 for t in all_tickets if t.get("sprint") and t.get("type") != "Epic")
+    orphaned_count = sum(1 for t in all_tickets if t.get("parent_status") in ("Closed", "Done"))
+    dup_count = 0
+    if duplicates:
+        dup_count = duplicates.get("duplicate_pairs_found", 0)
+    obsolete_count = obsolete.get("obsolete_candidates_found", 0) if obsolete else 0
+    escalated_count = priorities.get("auto_escalated_count", 0) if priorities else 0
+
+    # Load previous for deltas
+    prev = load_previous_log()
+    deltas = None
+    if prev:
+        deltas = {}
+        current = {
+            "open": len(all_tickets), "stale": len(stale_tickets),
+            "frozen": len(frozen_tickets), "orphaned": orphaned_count,
+            "obsolete": obsolete_count, "escalated": escalated_count,
+        }
+        for k in current:
+            prev_val = int(prev.get(k, 0))
+            diff = current[k] - prev_val
+            if diff != 0:
+                deltas[k] = {"prev": prev_val, "current": current[k], "diff": diff}
+
     data = {
         "meta": {
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-            "total_tickets": tickets["count"] if tickets else 0,
-            "stale_count": tickets.get("stale_count", 0) if tickets else 0,
-            "frozen_count": tickets.get("frozen_count", 0) if tickets else 0,
-            "jql": tickets["jql"] if tickets else "",
+            "total_tickets": tickets_data["count"] if tickets_data else 0,
+            "stale_count": len(stale_tickets),
+            "frozen_count": len(frozen_tickets),
+            "jql": tickets_data["jql"] if tickets_data else "",
+            "deltas": deltas,
         },
         "duplicates": duplicates,
         "obsolete": obsolete,
         "priorities": priorities,
-        "tickets": tickets["tickets"] if tickets else [],
-        "stale_tickets": tickets.get("stale_tickets", []) if tickets else [],
-        "frozen_tickets": tickets.get("frozen_tickets", []) if tickets else [],
+        "tickets": all_tickets,
+        "stale_tickets": stale_tickets,
+        "frozen_tickets": frozen_tickets,
     }
 
     js_content = (
@@ -48,6 +111,21 @@ def main():
         f.write(js_content)
 
     print(f"Written: {OUTPUT_FILE} ({len(js_content)} bytes)")
+
+    # Append metrics to log
+    metrics = {
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "open": len(all_tickets),
+        "stale": len(stale_tickets),
+        "frozen": len(frozen_tickets),
+        "epics": epic_count,
+        "sprint": sprint_count,
+        "orphaned": orphaned_count,
+        "duplicates": dup_count,
+        "obsolete": obsolete_count,
+        "escalated": escalated_count,
+    }
+    append_log(metrics)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ priority_scores.json
 triage-data.js
 triage-report-standalone.html
 triage-log.csv
+close-manifest.json
 
 # Python
 __pycache__/
