@@ -39,6 +39,16 @@ a:hover { text-decoration: underline; }
 .card-sm .label { font-size: 0.7em; }
 .card-clickable { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
 .card-clickable:hover { border-color: #60a5fa; background: #1a2332; }
+.orphan-parent-row { cursor: pointer; }
+.orphan-parent-row:hover { background: #1a2332; }
+.orphan-toggle { display: inline-block; transition: transform 0.2s; font-size: 0.7em; color: #9ca3af; margin-right: 6px; }
+.orphan-parent-row.expanded .orphan-toggle { transform: rotate(90deg); }
+.orphan-detail-row { display: none; }
+.orphan-detail-row.visible { display: table-row; }
+.orphan-detail-row td { padding: 4px 16px 12px; }
+.orphan-child-table { width: 100%; border: 1px solid #333; border-radius: 4px; }
+.orphan-child-table th { text-align: left; font-size: 0.8em; color: #9ca3af; padding: 4px 8px; border-bottom: 1px solid #333; }
+.orphan-child-table td { padding: 4px 8px; font-size: 0.9em; }
 .metrics-row { margin-top: 8px; }
 .card-operator {
   display: flex; align-items: center; font-size: 1.6em; font-weight: 300;
@@ -190,12 +200,16 @@ function render() {
   html += `<div class="summary-cards metrics-row">`;
   {
     const dupGroups = findDuplicateGeneratedTickets();
-    const dupGroupCount = dupGroups.length;
-    html += `<div class="card card-sm card-clickable" data-nav-tab="duplicates"><div class="value">${dupGroupCount}</div><div class="label">Possible Duplicates</div></div>`;
+    const dupParentCount = [...new Set(dupGroups.map(g => g.parentKey))].length;
+    html += `<div class="card card-sm card-clickable" data-nav-tab="duplicates"><div class="value">${dupParentCount}</div><div class="label">Possible Duplicates</div></div>`;
   }
   if (D.obsolete) html += `<div class="card card-sm card-clickable" data-nav-tab="obsolete"><div class="value">${D.obsolete.obsolete_candidates_found}</div><div class="label">Obsolete Candidates</div></div>`;
   if (D.priorities) {
     html += `<div class="card card-sm card-clickable" data-nav-tab="priorities"><div class="value">${D.priorities.auto_escalated_count}</div><div class="label">Auto-Escalated</div></div>`;
+  }
+  {
+    const orphanedCount = D.tickets.filter(t => t.parent_status === 'Closed' || t.parent_status === 'Done').length;
+    html += `<div class="card card-sm card-clickable" data-nav-tab="cleanup"><div class="value" style="color:#ef4444;">${orphanedCount}</div><div class="label">Orphaned</div></div>`;
   }
   html += `</div>`;
 
@@ -411,9 +425,16 @@ function renderDuplicatesTab() {
   const totalDupTickets = dupGroups.reduce((sum, g) => sum + g.tickets.length, 0);
   const affectedParents = [...new Set(dupGroups.map(g => g.parentKey))];
 
+  // Group all duplicate groups by parent
+  const byParent = {};
+  dupGroups.forEach(g => {
+    if (!byParent[g.parentKey]) byParent[g.parentKey] = [];
+    byParent[g.parentKey].push(...g.tickets);
+  });
+
   let html = `<div class="tab-content" id="tab-duplicates">`;
   html += `<h3>Possible Duplicates</h3>`;
-  html += `<div style="margin:8px 0 12px;color:#9ca3af;">${dupGroups.length} duplicate groups across ${affectedParents.length} parent epics (${totalDupTickets} tickets total) — automation likely ran multiple times on these epics.</div>`;
+  html += `<div style="margin:8px 0 12px;color:#9ca3af;">${affectedParents.length} parent epics with duplicated automation tasks (${totalDupTickets} tickets total) — automation likely ran multiple times on these epics.</div>`;
 
   html += `<div class="filter-bar">`;
   html += `<input type="text" id="dup-filter" placeholder="Filter by key, summary, or parent..." oninput="filterTable('dup-table','dup-filter')">`;
@@ -430,12 +451,20 @@ function renderDuplicatesTab() {
   });
   html += `</tr></thead><tbody>`;
 
-  dupGroups.forEach(g => {
-    const parentTicket = ticketLookup[g.parentKey];
+  // Sort parents by key
+  const sortedParents = Object.keys(byParent).sort();
+  sortedParents.forEach(parentKey => {
+    const parentTicket = ticketLookup[parentKey];
     const parentSummary = parentTicket ? esc(parentTicket.summary) : `<span style="color:#6b7280">(not in fetched data)</span>`;
-    const childrenList = g.tickets.map(t => `${jiraLink(t.key)} - ${esc(t.summary)}`).join('<br>');
+    // Sort children by Jira key (numeric part)
+    const children = byParent[parentKey].sort((a, b) => {
+      const numA = parseInt(a.key.split('-')[1]) || 0;
+      const numB = parseInt(b.key.split('-')[1]) || 0;
+      return numA - numB;
+    });
+    const childrenList = children.map(t => `${jiraLink(t.key)} - ${esc(t.summary)}`).join('<br>');
     html += `<tr>`;
-    html += `<td class="nowrap">${jiraLink(g.parentKey)}</td>`;
+    html += `<td class="nowrap">${jiraLink(parentKey)}</td>`;
     html += `<td>${parentSummary}</td>`;
     html += `<td>${childrenList}</td>`;
     html += `</tr>`;
@@ -449,26 +478,66 @@ function renderCleanupTab() {
   const tickets = D.tickets || [];
   const closedParent = tickets.filter(t => t.parent_status === 'Closed' || t.parent_status === 'Done');
 
-  let html = `<div class="tab-content" id="tab-cleanup">`;
+  // Group by parent
+  const byParent = {};
+  closedParent.forEach(t => {
+    const pk = t.parent_key || '(none)';
+    if (!byParent[pk]) byParent[pk] = { status: t.parent_status, summary: t.parent_summary || '', type: t.parent_type || '', children: [] };
+    byParent[pk].children.push(t);
+    if (!byParent[pk].summary && t.parent_summary) byParent[pk].summary = t.parent_summary;
+    if (!byParent[pk].type && t.parent_type) byParent[pk].type = t.parent_type;
+  });
 
-  html += `<h3>Closed-Parent Tickets (${closedParent.length})</h3>`;
-  html += `<div style="margin:8px 0 12px;color:#9ca3af;">Epics/Stories/Tasks whose parent is already Closed — likely leftover work.</div>`;
+  // Sort children within each parent by Jira ID
+  Object.values(byParent).forEach(g => {
+    g.children.sort((a, b) => {
+      const numA = parseInt(a.key.split('-')[1]) || 0;
+      const numB = parseInt(b.key.split('-')[1]) || 0;
+      return numA - numB;
+    });
+  });
+
+  // Sort parents by child count (desc) then key
+  const parentKeys = Object.keys(byParent).sort((a, b) => {
+    const diff = byParent[b].children.length - byParent[a].children.length;
+    return diff !== 0 ? diff : a.localeCompare(b);
+  });
+
+  // Get parent closed date from first child's parent_resolutiondate (fetched from API)
+  Object.values(byParent).forEach(g => {
+    const rd = g.children.find(t => t.parent_resolutiondate)?.parent_resolutiondate || '';
+    g.closedDate = rd.slice(0, 10);
+  });
+
+  let html = `<div class="tab-content" id="tab-cleanup">`;
+  html += `<h3>Closed-Parent Tickets (${closedParent.length} children across ${parentKeys.length} closed parents)</h3>`;
+  html += `<div style="margin:8px 0 12px;color:#9ca3af;">Epics/Stories/Tasks whose parent is already Closed — likely leftover work. Click a row to expand/collapse children.</div>`;
+
+  html += `<div class="filter-bar">`;
+  html += `<input type="text" id="cleanup-filter" placeholder="Filter by key or summary..." oninput="filterOrphanTable()">`;
+  html += `</div>`;
 
   html += `<table id="cleanup-table"><thead><tr>`;
-  ['Key','Summary','Type','Status','Parent','Parent Status'].forEach(h => {
+  ['Parent','Type','Summary','# Open Children','Closed'].forEach(h => {
     html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
   });
   html += `</tr></thead><tbody>`;
 
-  closedParent.forEach(t => {
-    html += `<tr>`;
-    html += `<td class="nowrap">${jiraLink(t.key)}</td>`;
-    html += `<td>${esc(t.summary)}</td>`;
-    html += `<td>${esc(t.type)}</td>`;
-    html += `<td>${esc(t.status)}</td>`;
-    html += `<td class="nowrap">${t.parent_key ? jiraLink(t.parent_key) : '—'}</td>`;
-    html += `<td class="red">${esc(t.parent_status)}</td>`;
+  parentKeys.forEach(pk => {
+    const group = byParent[pk];
+    const parentSummary = group.summary ? esc(group.summary) : '';
+    const childRows = group.children.map(t =>
+      `<tr><td class="nowrap">${jiraLink(t.key)}</td><td>${esc(t.summary)}</td><td>${esc(t.type)}</td><td>${esc(t.status)}</td></tr>`
+    ).join('');
+
+    html += `<tr class="orphan-parent-row" onclick="this.classList.toggle('expanded');this.nextElementSibling.classList.toggle('visible');">`;
+    html += `<td class="nowrap"><span class="orphan-toggle">&#9654;</span> ${jiraLink(pk)}</td>`;
+    html += `<td>${esc(group.type)}</td>`;
+    html += `<td>${parentSummary}</td>`;
+    html += `<td style="color:#ef4444;font-weight:600;">${group.children.length}</td>`;
+    html += `<td class="nowrap">${group.closedDate}</td>`;
     html += `</tr>`;
+    html += `<tr class="orphan-detail-row"><td colspan="5"><table class="orphan-child-table"><thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Status</th></tr></thead><tbody>${childRows}</tbody></table></td></tr>`;
   });
 
   html += `</tbody></table></div>`;
@@ -576,6 +645,16 @@ function toggleGeneratedRows(tableId, show) {
   });
 }
 
+function filterOrphanTable() {
+  const q = (document.getElementById('cleanup-filter')?.value || '').toLowerCase();
+  document.querySelectorAll('.orphan-parent-row').forEach(row => {
+    const text = row.textContent.toLowerCase();
+    const match = text.includes(q);
+    row.style.display = match ? '' : 'none';
+    row.nextElementSibling.style.display = match && row.classList.contains('expanded') ? 'table-row' : 'none';
+  });
+}
+
 // --- Tabs ---
 function initTabs() {
   document.querySelectorAll('.tab-bar').forEach(bar => {
@@ -623,7 +702,6 @@ function initAllTables() {
 function sortTable(table, colIdx, th) {
   const tbody = table.querySelector('tbody');
   if (!tbody) return;
-  const rows = Array.from(tbody.querySelectorAll('tr'));
   const isAsc = th.classList.contains('sorted-asc');
 
   table.querySelectorAll('th').forEach(h => {
@@ -632,11 +710,25 @@ function sortTable(table, colIdx, th) {
     if (ind) ind.textContent = '\u21C5';
   });
 
+  // Group parent+detail row pairs for tables with expandable rows
+  const allRows = Array.from(tbody.querySelectorAll('tr'));
+  const hasDetailRows = allRows.some(r => r.classList.contains('orphan-detail-row'));
+  let rows;
+  let pairMap = new Map();
+  if (hasDetailRows) {
+    rows = allRows.filter(r => r.classList.contains('orphan-parent-row'));
+    rows.forEach(r => {
+      const next = r.nextElementSibling;
+      if (next && next.classList.contains('orphan-detail-row')) pairMap.set(r, next);
+    });
+  } else {
+    rows = allRows;
+  }
+
   const dateRe = /^\d{4}-\d{2}-\d{2}/;
   rows.sort((a, b) => {
     let aVal = a.cells[colIdx]?.textContent.trim() || '';
     let bVal = b.cells[colIdx]?.textContent.trim() || '';
-    // Date sorting (YYYY-MM-DD prefix)
     const aDate = aVal.match(dateRe);
     const bDate = bVal.match(dateRe);
     if (aDate && bDate) {
@@ -650,7 +742,15 @@ function sortTable(table, colIdx, th) {
     return isAsc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
   });
 
-  rows.forEach(r => tbody.appendChild(r));
+  if (hasDetailRows) {
+    rows.forEach(r => {
+      tbody.appendChild(r);
+      const detail = pairMap.get(r);
+      if (detail) tbody.appendChild(detail);
+    });
+  } else {
+    rows.forEach(r => tbody.appendChild(r));
+  }
   th.classList.add('sorted', isAsc ? 'sorted-desc' : 'sorted-asc');
   const ind = th.querySelector('.sort-indicator');
   if (ind) ind.textContent = isAsc ? '\u25BC' : '\u25B2';

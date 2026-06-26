@@ -179,9 +179,45 @@ def normalize_issue(issue):
         "parent_key": parent.get("key", ""),
         "parent_summary": parent.get("fields", {}).get("summary", "") if parent else "",
         "parent_status": parent.get("fields", {}).get("status", {}).get("name", "") if parent else "",
+        "parent_type": parent.get("fields", {}).get("issuetype", {}).get("name", "") if parent else "",
         "links": normalized_links,
         "sprint": sprint_name,
     }
+
+
+def fetch_parent_resolution_dates(parent_keys):
+    """Fetch resolutiondate for a list of parent issue keys."""
+    if not parent_keys:
+        return {}
+    auth = get_auth()
+    base_url = f"https://{JIRA_INSTANCE}/rest/api/3/search/jql"
+    keys_jql = ", ".join(parent_keys)
+    jql = f"key in ({keys_jql})"
+    results = {}
+    next_page_token = None
+
+    while True:
+        params = {
+            "jql": jql,
+            "maxResults": 50,
+            "fields": "key,resolutiondate",
+        }
+        if next_page_token:
+            params["nextPageToken"] = next_page_token
+        resp = requests.get(base_url, params=params, auth=auth)
+        resp.raise_for_status()
+        data = resp.json()
+        for issue in data.get("issues", []):
+            key = issue.get("key", "")
+            rd = issue.get("fields", {}).get("resolutiondate", "")
+            results[key] = rd[:10] if rd else ""
+        if data.get("isLast", True):
+            break
+        next_page_token = data.get("nextPageToken")
+        if not next_page_token:
+            break
+
+    return results
 
 
 def main():
@@ -201,6 +237,23 @@ def main():
     print(f"JQL: {JQL_FROZEN}")
     frozen_tickets = fetch_all_tickets(JQL_FROZEN)
     print(f"Total frozen tickets fetched: {len(frozen_tickets)}")
+
+    # Fetch actual resolution dates for closed parent issues
+    all_tickets = tickets + stale_tickets + frozen_tickets
+    closed_parent_keys = list({
+        t["parent_key"] for t in all_tickets
+        if t.get("parent_status") in ("Closed", "Done") and t.get("parent_key")
+    })
+    parent_dates = {}
+    if closed_parent_keys:
+        print(f"\nFetching resolution dates for {len(closed_parent_keys)} closed parents...")
+        parent_dates = fetch_parent_resolution_dates(closed_parent_keys)
+        print(f"  Got dates for {sum(1 for v in parent_dates.values() if v)} parents")
+
+    # Inject parent_resolutiondate into tickets
+    for t in all_tickets:
+        pk = t.get("parent_key", "")
+        t["parent_resolutiondate"] = parent_dates.get(pk, "")
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_FILE, "w") as f:
