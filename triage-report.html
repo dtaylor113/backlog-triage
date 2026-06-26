@@ -737,22 +737,21 @@ function renderHistoryTab() {
   const totalClosed = closeLog.length;
   const netReduction = startingTotal - currentTotal;
 
-  // Totals cards
-  html += `<div style="display:flex;gap:16px;margin:12px 0 20px;flex-wrap:wrap;align-items:center;">`;
+  // Totals equation: Started At - orphan - duplicate - obsolete = Current Total
+  const orphanClosed = byLabel['triage-closed-orphan'] || 0;
+  const dupClosed = byLabel['triage-closed-duplicate'] || 0;
+  const obsClosed = byLabel['triage-closed-obsolete'] || 0;
+
+  html += `<div style="display:flex;gap:12px;margin:12px 0 20px;flex-wrap:wrap;align-items:center;">`;
   html += `<div class="card card-sm"><div class="value">${startingTotal}</div><div class="label">Started At (6/26)</div></div>`;
   html += `<span class="card-operator">−</span>`;
-  html += `<div class="card card-sm"><div class="value" style="color:#22c55e;">${totalClosed}</div><div class="label">Total Closed by Triage</div></div>`;
+  html += `<div class="card card-sm"><div class="value" style="color:#f59e0b;">${orphanClosed}</div><div class="label">Orphan</div></div>`;
+  html += `<span class="card-operator">−</span>`;
+  html += `<div class="card card-sm"><div class="value" style="color:#a78bfa;">${dupClosed}</div><div class="label">Duplicate</div></div>`;
+  html += `<span class="card-operator">−</span>`;
+  html += `<div class="card card-sm"><div class="value" style="color:#9ca3af;">${obsClosed}</div><div class="label">Obsolete</div></div>`;
   html += `<span class="card-operator">=</span>`;
   html += `<div class="card card-sm" style="border-color:#22c55e;"><div class="value">${currentTotal}</div><div class="label">Current Total</div></div>`;
-  html += `</div>`;
-
-  // Breakdown by category
-  html += `<div style="display:flex;gap:16px;margin:0 0 20px;flex-wrap:wrap;">`;
-  Object.entries(byLabel).sort((a,b) => b[1]-a[1]).forEach(([label, count]) => {
-    const name = label.replace('triage-closed-', '');
-    const color = name === 'orphan' ? '#f59e0b' : name === 'duplicate' ? '#a78bfa' : '#9ca3af';
-    html += `<div class="card card-sm"><div class="value" style="color:${color};">${count}</div><div class="label">${name}</div></div>`;
-  });
   html += `</div>`;
 
   // Bar chart by week
@@ -792,7 +791,7 @@ function renderHistoryTab() {
   // --- Closure detail table ---
   html += `<h3 style="margin-top:24px;">Closure Log</h3>`;
   html += `<table id="history-table"><thead><tr>`;
-  ['Date','Key','Resolution','Label','Reason'].forEach(h => {
+  ['Date','Key','Summary','Resolution','Label','Reason'].forEach(h => {
     html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
   });
   html += `</tr></thead><tbody>`;
@@ -800,6 +799,7 @@ function renderHistoryTab() {
     html += `<tr>`;
     html += `<td class="nowrap">${esc(r.date)}</td>`;
     html += `<td class="nowrap">${jiraLink(r.key)}</td>`;
+    html += `<td>${esc(r.summary || '')}</td>`;
     html += `<td>${esc(r.resolution)}</td>`;
     html += `<td><code style="font-size:11px;">${esc(r.label)}</code></td>`;
     html += `<td>${esc(r.reason)}</td>`;
@@ -1270,10 +1270,10 @@ function copyCliCommand() {
   const selected = getSelectedTickets();
   const manifest = {
     generated_at: new Date().toISOString(),
-    items: selected.map(s => ({ key: s.key, resolution: s.resolution, label: s.label, reason: s.reason }))
+    items: selected.map(s => ({ key: s.key, summary: s.summary, resolution: s.resolution, label: s.label, reason: s.reason }))
   };
-  const json = JSON.stringify(manifest, null, 2);
-  const cmd = `cd ~/repos/work/AI/backlog-triage && python3 scripts/close_tickets.py --execute --stdin <<'EOF'\n${json}\nEOF`;
+  const json = JSON.stringify(manifest);
+  const cmd = `cd ~/repos/work/AI/backlog-triage && python3 scripts/close_tickets.py --execute --stdin <<'EOF'\n${JSON.stringify(manifest, null, 2)}\nEOF`;
   navigator.clipboard.writeText(cmd).then(() => {
     const btn = document.querySelector('.modal-confirm');
     const original = btn.textContent;

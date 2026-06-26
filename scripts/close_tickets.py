@@ -116,10 +116,10 @@ def log_closures(items):
     with open(CLOSE_LOG_FILE, "a", newline="") as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(["date", "key", "resolution", "label", "reason"])
+            writer.writerow(["date", "key", "summary", "resolution", "label", "reason"])
         date = datetime.now().strftime("%Y-%m-%d")
         for item in items:
-            writer.writerow([date, item["key"], item["resolution"], item["label"], item["reason"]])
+            writer.writerow([date, item["key"], item.get("summary", ""), item["resolution"], item["label"], item["reason"]])
 
 
 def main():
