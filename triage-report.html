@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCMUI Backlog Triage Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0a0a0a;
+  color: #e5e7eb;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  padding: 12px 1vw;
+  width: 98vw;
+}
+h1 { font-size: 1.6em; margin-bottom: 4px; color: #fff; }
+h2 { font-size: 1.3em; margin: 28px 0 8px 0; color: #93c5fd; border-bottom: 1px solid #333; padding-bottom: 4px; }
+h3 { font-size: 1.1em; margin: 18px 0 6px 0; color: #a5b4fc; }
+.meta { color: #9ca3af; font-size: 0.85em; margin-bottom: 16px; }
+a { color: #60a5fa; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.red { color: #ef4444; font-weight: 600; }
+.orange { color: #f59e0b; font-weight: 600; }
+.green { color: #22c55e; font-weight: 600; }
+.purple { color: #a78bfa; font-weight: 600; }
+
+.summary-cards {
+  display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0 24px 0;
+}
+.card {
+  background: #1f2937; border: 1px solid #333; border-radius: 8px;
+  padding: 12px 18px; min-width: 120px; text-align: center;
+}
+.card .value { font-size: 1.6em; font-weight: 700; color: #fff; }
+.card .label { font-size: 0.8em; color: #9ca3af; margin-top: 3px; }
+.card-sm { padding: 8px 14px; min-width: 100px; }
+.card-sm .value { font-size: 1.2em; }
+.card-sm .label { font-size: 0.7em; }
+.card-clickable { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.card-clickable:hover { border-color: #60a5fa; background: #1a2332; }
+.metrics-row { margin-top: 8px; }
+.card-operator {
+  display: flex; align-items: center; font-size: 1.6em; font-weight: 300;
+  color: #6b7280; padding: 0 4px;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0 16px 0; }
+th, td { border: 1px solid #333; padding: 6px 10px; text-align: left; vertical-align: top; }
+th {
+  background: #1f2937; color: #d1d5db; font-weight: 600;
+  position: relative; cursor: pointer; user-select: none; white-space: nowrap;
+}
+th:hover { background: #374151; }
+th .sort-indicator { font-size: 10px; margin-left: 4px; opacity: 0.5; }
+th.sorted .sort-indicator { opacity: 1; }
+td { background: #111; }
+tr:hover td { background: #1a1a2e; }
+.nowrap { white-space: nowrap; }
+
+th .resize-handle {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 5px;
+  cursor: col-resize; background: transparent;
+}
+th .resize-handle:hover, th .resize-handle.active { background: #60a5fa; }
+
+.filter-bar { margin: 8px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.filter-bar input[type="text"] {
+  background: #1a1a2e; border: 1px solid #333; color: #e5e7eb;
+  padding: 6px 10px; border-radius: 4px; font-size: 13px; width: 280px;
+}
+.filter-bar input[type="text"]::placeholder { color: #6b7280; }
+.filter-bar input[type="text"]:focus { outline: none; border-color: #60a5fa; }
+.filter-bar select {
+  background: #1a1a2e; border: 1px solid #333; color: #e5e7eb;
+  padding: 6px 10px; border-radius: 4px; font-size: 13px;
+}
+.filter-bar select:focus { outline: none; border-color: #60a5fa; }
+
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 3px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+}
+.badge-high { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+.badge-medium { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
+.badge-low { background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.4); }
+.badge-blocker { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+.badge-critical { background: rgba(249, 115, 22, 0.2); color: #f97316; border: 1px solid rgba(249, 115, 22, 0.4); }
+.badge-major { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
+.badge-normal { background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.4); }
+.badge-minor { background: rgba(75, 85, 99, 0.15); color: #6b7280; border: 1px solid rgba(75, 85, 99, 0.3); }
+.badge-escalated { background: rgba(167, 139, 250, 0.2); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.4); }
+
+.tab-bar { display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid #333; }
+.tab {
+  padding: 8px 18px; cursor: pointer; color: #9ca3af; font-weight: 500;
+  border-bottom: 2px solid transparent; margin-bottom: -2px; font-size: 14px;
+}
+.tab:hover { color: #e5e7eb; }
+.tab.active { color: #93c5fd; border-bottom-color: #93c5fd; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.subtab-content { display: none; }
+.subtab-content.active { display: block; }
+
+.score-bar {
+  display: inline-block; height: 8px; border-radius: 4px; vertical-align: middle;
+}
+
+.info-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%; font-size: 10px; font-weight: 700;
+  background: rgba(96, 165, 250, 0.2); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.4);
+  cursor: pointer; margin-left: 4px; vertical-align: middle;
+}
+.info-btn:hover { background: rgba(96, 165, 250, 0.35); }
+
+.info-popup {
+  display: none; position: fixed; z-index: 1000;
+  background: #1f2937; border: 1px solid #4b5563; border-radius: 8px;
+  padding: 16px 20px; max-width: 420px; font-size: 12px; line-height: 1.6;
+  color: #e5e7eb; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.info-popup.visible { display: block; }
+.info-popup h4 { color: #93c5fd; margin-bottom: 8px; font-size: 13px; }
+.info-popup table { margin: 8px 0; font-size: 11px; }
+.info-popup th, .info-popup td { padding: 3px 8px; border-color: #374151; }
+.info-popup .close-btn {
+  position: absolute; top: 8px; right: 12px; cursor: pointer;
+  color: #6b7280; font-size: 16px;
+}
+.info-popup .close-btn:hover { color: #e5e7eb; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="triage-data.js"></script>
+<script>
+const D = window.TRIAGE_DATA;
+const JIRA = 'https://redhat.atlassian.net/browse/';
+
+function jiraLink(key) { return `<a href="${JIRA}${key}" target="_blank">${key}</a>`; }
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function scoreColor(score) {
+  if (score >= 80) return '#ef4444';
+  if (score >= 60) return '#f97316';
+  if (score >= 40) return '#f59e0b';
+  if (score >= 20) return '#9ca3af';
+  return '#4b5563';
+}
+
+function confidenceBadge(conf) {
+  return `<span class="badge badge-${conf}">${conf}</span>`;
+}
+
+function priorityBadge(label) {
+  const name = label.replace('suggested-priority-', '');
+  return `<span class="badge badge-${name}">${name}</span>`;
+}
+
+function render() {
+  const app = document.getElementById('app');
+  let html = '';
+
+  html += `<h1>OCMUI Backlog Triage Report</h1>`;
+  html += `<div class="meta">Generated: ${new Date(D.meta.generated_at).toLocaleString()}</div>`;
+
+  // Ticket counts matching Jira board layout
+  const allTickets = D.tickets || [];
+  const staleTickets = D.stale_tickets || [];
+  const frozenTickets = D.frozen_tickets || [];
+  const staleCount = staleTickets.length;
+  const frozenCount = frozenTickets.length;
+  const epicCount = allTickets.filter(t => t.type === 'Epic').length;
+  const sprintNonEpic = allTickets.filter(t => t.sprint && t.type !== 'Epic').length;
+  const backlogNonEpic = allTickets.filter(t => !t.sprint && t.type !== 'Epic').length + staleCount + frozenCount;
+  const totalAll = sprintNonEpic + backlogNonEpic + epicCount;
+  html += `<div class="summary-cards">`;
+  html += `<div class="card"><div class="value">${backlogNonEpic}</div><div class="label">Backlog</div></div>`;
+  html += `<span class="card-operator">+</span>`;
+  html += `<div class="card"><div class="value">${sprintNonEpic}</div><div class="label">Sprint</div></div>`;
+  html += `<span class="card-operator">+</span>`;
+  html += `<div class="card"><div class="value">${epicCount}</div><div class="label">Epics</div></div>`;
+  html += `<span class="card-operator">=</span>`;
+  html += `<div class="card" style="border-color:#60a5fa;"><div class="value">${totalAll}</div><div class="label">Total</div></div>`;
+  html += `</div>`;
+
+  // Analysis metrics row (clickable)
+  html += `<div class="summary-cards metrics-row">`;
+  {
+    const dupGroups = findDuplicateGeneratedTickets();
+    const dupGroupCount = dupGroups.length;
+    html += `<div class="card card-sm card-clickable" data-nav-tab="duplicates"><div class="value">${dupGroupCount}</div><div class="label">Possible Duplicates</div></div>`;
+  }
+  if (D.obsolete) html += `<div class="card card-sm card-clickable" data-nav-tab="obsolete"><div class="value">${D.obsolete.obsolete_candidates_found}</div><div class="label">Obsolete Candidates</div></div>`;
+  if (D.priorities) {
+    html += `<div class="card card-sm card-clickable" data-nav-tab="priorities"><div class="value">${D.priorities.auto_escalated_count}</div><div class="label">Auto-Escalated</div></div>`;
+  }
+  html += `</div>`;
+
+  // Tabs
+  html += `<div class="tab-bar">`;
+  html += `<div class="tab active" data-tab="priorities">Priority Scoring</div>`;
+  html += `<div class="tab" data-tab="lifecycle">Lifecycle</div>`;
+  html += `<div class="tab" data-tab="obsolete">Obsolete Candidates</div>`;
+  html += `<div class="tab" data-tab="duplicates">Possible Duplicates</div>`;
+  html += `<div class="tab" data-tab="cleanup">Orphaned Issues</div>`;
+  html += `</div>`;
+
+  html += renderPrioritiesTab();
+  html += renderObsoleteTab();
+  html += renderDuplicatesTab();
+  html += renderCleanupTab();
+  html += renderLifecycleTab();
+
+  app.innerHTML = html;
+  initTabs();
+  initAllTables();
+}
+
+function renderPrioritiesTab() {
+  if (!D.priorities) return `<div class="tab-content active" id="tab-priorities"><p>Priority scoring not yet run.</p></div>`;
+
+  const scored = D.priorities.scored_tickets;
+  const dist = D.priorities.label_distribution;
+
+  let html = `<div class="tab-content active" id="tab-priorities">`;
+
+  // Distribution summary
+  html += `<h3>Suggested Priority Distribution</h3>`;
+  html += `<div style="display:flex;gap:12px;margin:8px 0 16px;">`;
+  const order = ['suggested-priority-blocker','suggested-priority-critical','suggested-priority-major','suggested-priority-normal','suggested-priority-minor'];
+  order.forEach(label => {
+    const count = dist[label] || 0;
+    const name = label.replace('suggested-priority-','');
+    html += `<div style="text-align:center;">${priorityBadge(label)}<div style="font-size:18px;font-weight:700;margin-top:4px;">${count}</div></div>`;
+  });
+  html += `</div>`;
+
+  // Filter
+  html += `<div class="filter-bar">`;
+  html += `<input type="text" id="priority-filter" placeholder="Filter by key or summary..." oninput="filterTable('priorities-table','priority-filter')">`;
+  html += `<select id="priority-type-filter" onchange="filterTable('priorities-table','priority-filter')"><option value="">All Types</option><option value="Bug">Bug</option><option value="Story">Story</option><option value="Epic">Epic</option><option value="Task">Task</option></select>`;
+  html += `<select id="priority-label-filter" onchange="filterTable('priorities-table','priority-filter')"><option value="">All Suggested</option>`;
+  order.forEach(l => { html += `<option value="${l}">${l.replace('suggested-priority-','')}</option>`; });
+  html += `</select>`;
+  html += `</div>`;
+
+  // Table
+  html += `<table id="priorities-table"><thead><tr>`;
+  const priorityHeaders = [
+    {name: 'Type'},
+    {name: 'Key'},
+    {name: 'Summary'},
+    {name: 'Current'},
+    {name: 'Priority Score', info: 'score-info'},
+    {name: 'Suggested', info: 'suggested-info'},
+    {name: 'Escalated', info: 'escalated-info'},
+    {name: 'Reporter'},
+    {name: 'Comments'},
+    {name: 'Last Updated'},
+    {name: 'Created'},
+  ];
+  priorityHeaders.forEach(h => {
+    const infoBtn = h.info ? `<span class="info-btn" data-info="${h.info}">?</span>` : '';
+    html += `<th>${h.name}${infoBtn}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  scored.forEach(s => {
+    const color = scoreColor(s.score);
+    const barWidth = Math.min(s.score, 100);
+    html += `<tr data-type="${esc(s.type)}" data-label="${esc(s.suggested_label)}">`;
+    html += `<td>${esc(s.type)}</td>`;
+    html += `<td class="nowrap">${jiraLink(s.key)}</td>`;
+    html += `<td>${esc(s.summary)}</td>`;
+    html += `<td>${esc(s.current_priority)}</td>`;
+    html += `<td class="nowrap"><span class="score-bar" style="width:${barWidth}px;background:${color};"></span> ${s.score}</td>`;
+    html += `<td>${priorityBadge(s.suggested_label)}</td>`;
+    html += `<td>${s.auto_escalated ? '<span class="badge badge-escalated">escalated</span>' : ''}</td>`;
+    html += `<td>${esc(s.reporter_email.split('@')[0] || s.reporter_name || '')}</td>`;
+    html += `<td>${s.comment_count}</td>`;
+    html += `<td class="nowrap">${(s.updated || '').slice(0, 10)}</td>`;
+    html += `<td class="nowrap">${(s.created || '').slice(0, 10)}</td>`;
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  return html;
+}
+
+function renderObsoleteTab() {
+  if (!D.obsolete) return `<div class="tab-content" id="tab-obsolete"><p>Obsolete detection not yet run.</p></div>`;
+
+  const candidates = D.obsolete.candidates;
+  let html = `<div class="tab-content" id="tab-obsolete">`;
+
+  html += `<h3>Obsolete Candidates (${candidates.length} total)</h3>`;
+  html += `<div style="margin:8px 0 12px;color:#9ca3af;">High: ${D.obsolete.by_confidence.high} | Medium: ${D.obsolete.by_confidence.medium} | Low: ${D.obsolete.by_confidence.low}</div>`;
+
+  // Filter
+  html += `<div class="filter-bar">`;
+  html += `<input type="text" id="obsolete-filter" placeholder="Filter by key or summary..." oninput="filterTable('obsolete-table','obsolete-filter')">`;
+  html += `<select id="obsolete-conf-filter" onchange="filterTable('obsolete-table','obsolete-filter')"><option value="">All Confidence</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>`;
+  html += `</div>`;
+
+  html += `<table id="obsolete-table"><thead><tr>`;
+  const obsoleteHeaders = [
+    {name: 'Type'},
+    {name: 'Key'},
+    {name: 'Summary'},
+    {name: 'Age (mo)'},
+    {name: 'Inactive (mo)'},
+    {name: 'Obsolete Score', info: 'obsolete-score-info'},
+    {name: 'Reasons'},
+  ];
+  obsoleteHeaders.forEach(h => {
+    const infoBtn = h.info ? `<span class="info-btn" data-info="${h.info}">?</span>` : '';
+    html += `<th>${h.name}${infoBtn}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  candidates.forEach(c => {
+    html += `<tr data-confidence="${c.confidence}">`;
+    html += `<td>${esc(c.type)}</td>`;
+    html += `<td class="nowrap">${jiraLink(c.key)}</td>`;
+    html += `<td>${esc(c.summary)}</td>`;
+    html += `<td class="nowrap">${c.age_months.toFixed(0)}</td>`;
+    html += `<td class="nowrap">${c.inactivity_months.toFixed(0)}</td>`;
+    const obsColor = scoreColor(c.score);
+    const obsBarWidth = Math.min(c.score, 100);
+    html += `<td class="nowrap"><span class="score-bar" style="width:${obsBarWidth}px;background:${obsColor};"></span> ${c.score}</td>`;
+    html += `<td style="font-size:12px;">${c.reasons.map(r => esc(r)).join('<br>')}</td>`;
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  return html;
+}
+
+const GENERATED_PREFIX_PATTERNS = [
+  'create feature flag',
+  'enable feature flag',
+  'remove feature flag',
+  'e2e automation',
+  'ci automation',
+  'post-merge testing',
+  'refinement task for',
+];
+
+const AUTOMATION_REPORTERS = ['automation for jira'];
+
+function isGeneratedTicket(summary, reporterEmail, reporterName) {
+  const lower = (summary || '').toLowerCase();
+  const stripped = lower.replace(/^\[/, '');
+  if (GENERATED_PREFIX_PATTERNS.some(p => lower.startsWith(p) || stripped.startsWith(p))) return true;
+  const rName = (reporterName || '').toLowerCase();
+  if (AUTOMATION_REPORTERS.some(a => rName.includes(a))) return true;
+  return false;
+}
+
+function getGeneratedPrefix(summary) {
+  const lower = (summary || '').toLowerCase();
+  for (const p of GENERATED_PREFIX_PATTERNS) {
+    if (lower.startsWith(p)) return p;
+  }
+  return null;
+}
+
+function isRealGeneratedDuplicate(pairA, pairB) {
+  const prefixA = getGeneratedPrefix(pairA);
+  const prefixB = getGeneratedPrefix(pairB);
+  // Only a real dup if both have the SAME prefix type
+  return prefixA && prefixB && prefixA === prefixB;
+}
+
+// Parents known to have many similarly-named automated tasks by design (not duplicates)
+const DUP_PARENT_WHITELIST = ['OCMUI-1534', 'OCMUI-3051'];
+
+function findDuplicateGeneratedTickets() {
+  // Direct approach: group ALL tickets by parent_key + prefix type.
+  // If any group has 2+ tickets, those are duplicates (automation ran twice).
+  const allTickets = [...(D.tickets || []), ...(D.stale_tickets || []), ...(D.frozen_tickets || [])];
+  const groups = {};
+
+  allTickets.forEach(t => {
+    if (!t.parent_key) return;
+    if (DUP_PARENT_WHITELIST.includes(t.parent_key)) return;
+    const prefix = getGeneratedPrefix(t.summary);
+    if (!prefix) return;
+    const groupKey = `${t.parent_key}::${prefix}`;
+    if (!groups[groupKey]) groups[groupKey] = [];
+    groups[groupKey].push(t);
+  });
+
+  // Only keep groups with 2+ tickets (actual duplicates)
+  const dupGroups = Object.entries(groups)
+    .filter(([, tickets]) => tickets.length >= 2)
+    .map(([key, tickets]) => {
+      const [parentKey, prefix] = key.split('::');
+      return { parentKey, prefix, tickets };
+    })
+    .sort((a, b) => a.parentKey.localeCompare(b.parentKey) || a.prefix.localeCompare(b.prefix));
+
+  return dupGroups;
+}
+
+function renderDuplicatesTab() {
+  const dupGroups = findDuplicateGeneratedTickets();
+  const totalDupTickets = dupGroups.reduce((sum, g) => sum + g.tickets.length, 0);
+  const affectedParents = [...new Set(dupGroups.map(g => g.parentKey))];
+
+  let html = `<div class="tab-content" id="tab-duplicates">`;
+  html += `<h3>Possible Duplicates</h3>`;
+  html += `<div style="margin:8px 0 12px;color:#9ca3af;">${dupGroups.length} duplicate groups across ${affectedParents.length} parent epics (${totalDupTickets} tickets total) — automation likely ran multiple times on these epics.</div>`;
+
+  html += `<div class="filter-bar">`;
+  html += `<input type="text" id="dup-filter" placeholder="Filter by key, summary, or parent..." oninput="filterTable('dup-table','dup-filter')">`;
+  html += `</div>`;
+
+  // Build a lookup for parent summaries
+  const allTickets = [...(D.tickets || []), ...(D.stale_tickets || []), ...(D.frozen_tickets || [])];
+  const ticketLookup = {};
+  allTickets.forEach(t => { ticketLookup[t.key] = t; });
+
+  html += `<table id="dup-table"><thead><tr>`;
+  ['Parent','Parent Summary','Possible Duplicated Children'].forEach(h => {
+    html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  dupGroups.forEach(g => {
+    const parentTicket = ticketLookup[g.parentKey];
+    const parentSummary = parentTicket ? esc(parentTicket.summary) : `<span style="color:#6b7280">(not in fetched data)</span>`;
+    const childrenList = g.tickets.map(t => `${jiraLink(t.key)} - ${esc(t.summary)}`).join('<br>');
+    html += `<tr>`;
+    html += `<td class="nowrap">${jiraLink(g.parentKey)}</td>`;
+    html += `<td>${parentSummary}</td>`;
+    html += `<td>${childrenList}</td>`;
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  return html;
+}
+
+function renderCleanupTab() {
+  const tickets = D.tickets || [];
+  const closedParent = tickets.filter(t => t.parent_status === 'Closed' || t.parent_status === 'Done');
+
+  let html = `<div class="tab-content" id="tab-cleanup">`;
+
+  html += `<h3>Closed-Parent Tickets (${closedParent.length})</h3>`;
+  html += `<div style="margin:8px 0 12px;color:#9ca3af;">Epics/Stories/Tasks whose parent is already Closed — likely leftover work.</div>`;
+
+  html += `<table id="cleanup-table"><thead><tr>`;
+  ['Key','Summary','Type','Status','Parent','Parent Status'].forEach(h => {
+    html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  closedParent.forEach(t => {
+    html += `<tr>`;
+    html += `<td class="nowrap">${jiraLink(t.key)}</td>`;
+    html += `<td>${esc(t.summary)}</td>`;
+    html += `<td>${esc(t.type)}</td>`;
+    html += `<td>${esc(t.status)}</td>`;
+    html += `<td class="nowrap">${t.parent_key ? jiraLink(t.parent_key) : '—'}</td>`;
+    html += `<td class="red">${esc(t.parent_status)}</td>`;
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  return html;
+}
+
+function renderLifecycleTab() {
+  const stale = D.stale_tickets || [];
+  const frozen = D.frozen_tickets || [];
+
+  let html = `<div class="tab-content" id="tab-lifecycle">`;
+
+  // Sub-tabs
+  html += `<div class="tab-bar" style="margin-top:12px;">`;
+  html += `<div class="tab active" data-subtab="lifecycle-stale">Stale (${stale.length})</div>`;
+  html += `<div class="tab" data-subtab="lifecycle-frozen">Frozen (${frozen.length})</div>`;
+  html += `</div>`;
+
+  // Stale sub-tab
+  const staleNonGenerated = stale.filter(t => !isGeneratedTicket(t.summary, t.reporter_email, t.reporter_name));
+  html += `<div class="subtab-content active" id="subtab-lifecycle-stale">`;
+  html += `<div style="margin:8px 0 12px;color:#9ca3af;">Tickets labeled <code>lifecycle-stale</code> — auto-close process will close these (>60d warning, >90d close). Review if any should be rescued with <code>lifecycle-frozen</code>.</div>`;
+  html += `<div class="filter-bar">`;
+  html += `<input type="text" id="stale-filter" placeholder="Filter by key or summary..." oninput="filterTable('stale-table','stale-filter')">`;
+  html += `<label style="display:inline-flex;align-items:center;gap:6px;margin-left:16px;color:#9ca3af;font-size:0.85em;cursor:pointer;white-space:nowrap;"><input type="checkbox" id="stale-show-generated" style="margin:0;vertical-align:middle;" onchange="toggleGeneratedRows('stale-table', this.checked)"> Show Generated Items (${stale.length - staleNonGenerated.length})</label>`;
+  html += `</div>`;
+  html += renderLifecycleTable('stale-table', stale, {showEstClose: true, hideGenerated: true});
+  html += `</div>`;
+
+  // Frozen sub-tab
+  html += `<div class="subtab-content" id="subtab-lifecycle-frozen">`;
+  html += `<div style="margin:8px 0 12px;color:#9ca3af;">Tickets labeled <code>lifecycle-frozen</code> — exempt from auto-close. These have been intentionally preserved.</div>`;
+  html += `<div class="filter-bar">`;
+  html += `<input type="text" id="frozen-filter" placeholder="Filter by key or summary..." oninput="filterTable('frozen-table','frozen-filter')">`;
+  html += `</div>`;
+  html += renderLifecycleTable('frozen-table', frozen, {showEstClose: false});
+  html += `</div>`;
+
+  html += `</div>`;
+  return html;
+}
+
+function estimateCloseDate(updatedStr) {
+  if (!updatedStr) return null;
+  const updated = new Date(updatedStr);
+  if (isNaN(updated)) return null;
+  const closeDate = new Date(updated);
+  closeDate.setDate(closeDate.getDate() + 90);
+  return closeDate;
+}
+
+function closeDateDisplay(updatedStr) {
+  const closeDate = estimateCloseDate(updatedStr);
+  if (!closeDate) return '';
+  const now = new Date();
+  const daysLeft = Math.ceil((closeDate - now) / (1000 * 60 * 60 * 24));
+  const dateStr = closeDate.toISOString().slice(0, 10);
+  let color = '#9ca3af';
+  if (daysLeft <= 7) color = '#ef4444';
+  else if (daysLeft <= 20) color = '#f59e0b';
+  const label = daysLeft <= 0 ? 'overdue' : `${daysLeft}d`;
+  return `<span style="color:${color};font-weight:600;">${dateStr}</span> <span style="color:${color};font-size:0.8em;">(${label})</span>`;
+}
+
+function renderLifecycleTable(tableId, tickets, {showEstClose = true, hideGenerated = false} = {}) {
+  let html = `<table id="${tableId}"><thead><tr>`;
+  const lcHeaders = [
+    {name: 'Type'}, {name: 'Key'}, {name: 'Summary'}, {name: 'Status'},
+    {name: 'Priority'}, {name: 'Reporter'}, {name: 'Last Updated'}, {name: 'Created'},
+  ];
+  if (showEstClose) lcHeaders.push({name: 'Est. Close', info: 'est-close-info'});
+  lcHeaders.push({name: 'Parent'});
+  lcHeaders.forEach(h => {
+    const infoBtn = h.info ? `<span class="info-btn" data-info="${h.info}">?</span>` : '';
+    html += `<th>${h.name}${infoBtn}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  tickets.forEach(t => {
+    const generated = isGeneratedTicket(t.summary, t.reporter_email, t.reporter_name);
+    const hidden = hideGenerated && generated;
+    html += `<tr data-generated="${generated ? 'yes' : 'no'}" ${hidden ? 'style="display:none;"' : ''}>`;
+    html += `<td>${esc(t.type)}</td>`;
+    html += `<td class="nowrap">${jiraLink(t.key)}</td>`;
+    html += `<td>${esc(t.summary)}</td>`;
+    html += `<td>${esc(t.status)}</td>`;
+    html += `<td>${esc(t.priority)}</td>`;
+    html += `<td>${esc((t.reporter_email || '').split('@')[0] || t.reporter_name || '')}</td>`;
+    html += `<td class="nowrap">${(t.updated || '').slice(0, 10)}</td>`;
+    html += `<td class="nowrap">${(t.created || '').slice(0, 10)}</td>`;
+    if (showEstClose) html += `<td class="nowrap">${closeDateDisplay(t.updated)}</td>`;
+    html += `<td class="nowrap">${t.parent_key ? jiraLink(t.parent_key) : ''}</td>`;
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table>`;
+  return html;
+}
+
+function toggleGeneratedRows(tableId, show) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  table.querySelectorAll('tr[data-generated="yes"]').forEach(row => {
+    row.style.display = show ? '' : 'none';
+  });
+}
+
+// --- Tabs ---
+function initTabs() {
+  document.querySelectorAll('.tab-bar').forEach(bar => {
+    bar.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Main tabs
+        if (tab.dataset.tab) {
+          bar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+          initAllTables();
+        }
+        // Sub-tabs (within duplicates)
+        if (tab.dataset.subtab) {
+          bar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          const parent = bar.parentElement;
+          parent.querySelectorAll('.subtab-content').forEach(sc => sc.classList.remove('active'));
+          tab.classList.add('active');
+          parent.querySelector('#subtab-' + tab.dataset.subtab).classList.add('active');
+          initAllTables();
+        }
+      });
+    });
+  });
+}
+
+// --- Sorting ---
+function initAllTables() {
+  document.querySelectorAll('table').forEach(table => {
+    const headers = table.querySelectorAll('th');
+    headers.forEach((th, colIdx) => {
+      th.addEventListener('click', (e) => {
+        if (e.target.classList.contains('resize-handle')) return;
+        if (e.target.closest('.info-btn')) return;
+        sortTable(table, colIdx, th);
+      });
+      // Resize handles
+      const handle = th.querySelector('.resize-handle');
+      if (handle) initResize(th, handle);
+    });
+  });
+}
+
+function sortTable(table, colIdx, th) {
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const isAsc = th.classList.contains('sorted-asc');
+
+  table.querySelectorAll('th').forEach(h => {
+    h.classList.remove('sorted', 'sorted-asc', 'sorted-desc');
+    const ind = h.querySelector('.sort-indicator');
+    if (ind) ind.textContent = '\u21C5';
+  });
+
+  const dateRe = /^\d{4}-\d{2}-\d{2}/;
+  rows.sort((a, b) => {
+    let aVal = a.cells[colIdx]?.textContent.trim() || '';
+    let bVal = b.cells[colIdx]?.textContent.trim() || '';
+    // Date sorting (YYYY-MM-DD prefix)
+    const aDate = aVal.match(dateRe);
+    const bDate = bVal.match(dateRe);
+    if (aDate && bDate) {
+      return isAsc ? bDate[0].localeCompare(aDate[0]) : aDate[0].localeCompare(bDate[0]);
+    }
+    const aNum = parseFloat(aVal);
+    const bNum = parseFloat(bVal);
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return isAsc ? bNum - aNum : aNum - bNum;
+    }
+    return isAsc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
+  });
+
+  rows.forEach(r => tbody.appendChild(r));
+  th.classList.add('sorted', isAsc ? 'sorted-desc' : 'sorted-asc');
+  const ind = th.querySelector('.sort-indicator');
+  if (ind) ind.textContent = isAsc ? '\u25BC' : '\u25B2';
+}
+
+// --- Column Resize ---
+function initResize(th, handle) {
+  let startX, startWidth;
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    startX = e.pageX;
+    startWidth = th.offsetWidth;
+    handle.classList.add('active');
+    const onMove = (ev) => { th.style.width = (startWidth + ev.pageX - startX) + 'px'; th.style.minWidth = th.style.width; };
+    const onUp = () => { handle.classList.remove('active'); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+// --- Filtering ---
+function filterTable(tableId, inputId) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const input = document.getElementById(inputId);
+  const query = (input?.value || '').toLowerCase();
+
+  // Type filter (priorities)
+  const typeFilter = document.getElementById('priority-type-filter');
+  const typeVal = typeFilter ? typeFilter.value : '';
+  // Label filter (priorities)
+  const labelFilter = document.getElementById('priority-label-filter');
+  const labelVal = labelFilter ? labelFilter.value : '';
+  // Confidence filter (obsolete)
+  const confFilter = document.getElementById('obsolete-conf-filter');
+  const confVal = confFilter ? confFilter.value : '';
+  // Duplicate type filter (check both sub-tab filters)
+  const dupIssuesTypeFilter = document.getElementById('dup-issues-type-filter');
+  const dupGenTypeFilter = document.getElementById('dup-gen-type-filter');
+  const dupTypeVal = (dupIssuesTypeFilter && table.id === 'dup-issues-table') ? dupIssuesTypeFilter.value
+    : (dupGenTypeFilter && table.id === 'dup-gen-table') ? dupGenTypeFilter.value : '';
+
+  const rows = table.querySelectorAll('tbody tr');
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    let visible = !query || text.includes(query);
+
+    if (visible && typeVal && row.dataset.type) {
+      visible = row.dataset.type === typeVal;
+    }
+    if (visible && labelVal && row.dataset.label) {
+      visible = row.dataset.label === labelVal;
+    }
+    if (visible && confVal && row.dataset.confidence) {
+      visible = row.dataset.confidence === confVal;
+    }
+    if (visible && dupTypeVal) {
+      if (dupTypeVal === 'same-parent') {
+        visible = row.dataset.sameParent === 'yes';
+      }
+    }
+
+    row.style.display = visible ? '' : 'none';
+  });
+}
+
+render();
+
+// --- Info Popups ---
+const INFO_CONTENT = {
+  'score-info': `<h4>Priority Score (0\u2013100)</h4>
+<table><thead><tr><th>Signal</th><th>Max</th><th>Logic</th></tr></thead><tbody>
+<tr><td>Reporter source</td><td>25</td><td>External (customer/PM) = +25; QE = +10; Dev/Automation = 0</td></tr>
+<tr><td>Jira Priority field</td><td>20</td><td>Blocker=20, Critical=16, Major=12, Normal=6, Minor=2</td></tr>
+<tr><td>Comment count</td><td>15</td><td>5 = +8; 6\u201310 = +12; 10+ = +15</td></tr>
+<tr><td>Age + activity ratio</td><td>15</td><td>High activity on old ticket = high priority</td></tr>
+<tr><td>Linked to active Epic</td><td>10</td><td>Parent Epic is In Progress/Review/Refinement</td></tr>
+<tr><td>Customer-facing bug</td><td>10</td><td>Bug type, not tech-debt/internal</td></tr>
+<tr><td>Lifecycle-frozen</td><td>8</td><td>Deliberately preserved from auto-deletion \u2014 someone thought it worth keeping</td></tr>
+<tr><td>Watchers &gt; 3</td><td>5</td><td>Broad interest indicator</td></tr>
+</tbody></table>
+<p>Bonus: Recent regression bug (+5). Deduction: Sprint bounce (-5 each, max -15).</p>`,
+
+  'suggested-info': `<h4>Suggested Priority</h4>
+<p>Mapped from the computed score:</p>
+<table><thead><tr><th>Score Range</th><th>Label</th></tr></thead><tbody>
+<tr><td>80\u2013100</td><td>Blocker</td></tr>
+<tr><td>60\u201379</td><td>Critical</td></tr>
+<tr><td>40\u201359</td><td>Major</td></tr>
+<tr><td>20\u201339</td><td>Normal</td></tr>
+<tr><td>0\u201319</td><td>Minor</td></tr>
+</tbody></table>
+<p>This is a <strong>suggestion</strong> \u2014 the defect manager or sprint planning reviews and confirms/overrides.</p>`,
+
+  'escalated-info': `<h4>Auto-Escalation</h4>
+<p>Tickets are auto-escalated to Critical+ (floor score = 70) when any of these are true:</p>
+<ul style="margin:6px 0 0 16px;">
+<li><strong>Customer escalation links</strong> \u2014 linked to Salesforce/support case</li>
+<li><strong>SLA/CVE due dates</strong> \u2014 Due date approaching within 2 sprints</li>
+<li><strong>Blocking external team</strong> \u2014 "blocks" link to a non-OCMUI ticket</li>
+</ul>`,
+
+  'confidence-info': `<h4>Obsolete Confidence</h4>
+<p>How likely a ticket is obsolete, based on these tiers:</p>
+<ul style="margin:6px 0 0 16px;">
+<li><strong>High</strong> \u2014 Ticket references a component, route, or file that has been deleted from <code>src/</code></li>
+<li><strong>Medium</strong> \u2014 Ticket references a refactored wizard/component (name changed, fields removed)</li>
+<li><strong>Low</strong> \u2014 Ticket is 18+ months old with no activity in 12+ months, and/or reporter is no longer on the team</li>
+</ul>`,
+
+  'est-close-info': `<h4>Estimated Close Date</h4>
+<p>Approximation of when the lifecycle bot will auto-close this ticket.</p>
+<p><strong>Lifecycle bot process:</strong></p>
+<ol style="margin:6px 0 0 16px;">
+<li>After <strong>180 days</strong> of inactivity → adds <code>lifecycle-stale</code> label</li>
+<li>After an additional <strong>90 days</strong> of inactivity → auto-closes the ticket</li>
+</ol>
+<p><strong>Calculation:</strong> Last Updated + 90 days</p>
+<p>Since the label is typically applied around the last update timestamp, we estimate closure as Last Updated + 90d.</p>
+<p><strong>Color coding:</strong></p>
+<ul style="margin:6px 0 0 16px;">
+<li><span style="color:#ef4444;font-weight:600;">Red</span> — 7 days or fewer remaining (or overdue)</li>
+<li><span style="color:#f59e0b;font-weight:600;">Yellow</span> — 8–20 days remaining</li>
+<li>Gray — more than 20 days remaining</li>
+</ul>
+<p style="margin-top:8px;color:#9ca3af;font-size:0.85em;">To rescue a ticket: remove the <code>lifecycle-stale</code> label or add <code>lifecycle-frozen</code>. Any activity resets the timer.</p>`,
+
+  'obsolete-score-info': `<h4>Obsolete Score</h4>
+<p>A composite score indicating how likely the ticket is obsolete:</p>
+<table><thead><tr><th>Signal</th><th>Points</th></tr></thead><tbody>
+<tr><td>References deleted route/file</td><td>+40</td></tr>
+<tr><td>References refactored component</td><td>+20</td></tr>
+<tr><td>Ticket age \u2265 18 months</td><td>+15</td></tr>
+<tr><td>No activity in \u2265 12 months</td><td>+15</td></tr>
+<tr><td>Reporter no longer on team</td><td>+10</td></tr>
+</tbody></table>
+<p>Threshold: score \u2265 20 to appear as a candidate.</p>
+<p style="margin-top:8px;color:#9ca3af;font-size:0.85em;">Note: "Parent is Closed" is handled separately in the Orphaned Issues tab.</p>`,
+};
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.info-btn');
+  const existing = document.querySelector('.info-popup.visible');
+
+  if (existing && (!btn || existing.dataset.source !== btn.dataset.info)) {
+    existing.classList.remove('visible');
+  }
+
+  if (btn) {
+    e.stopPropagation();
+    let popup = document.querySelector('.info-popup');
+    if (!popup) {
+      popup = document.createElement('div');
+      popup.className = 'info-popup';
+      document.body.appendChild(popup);
+    }
+    const key = btn.dataset.info;
+    popup.dataset.source = key;
+    popup.innerHTML = `<span class="close-btn">\u00D7</span>${INFO_CONTENT[key] || ''}`;
+    const rect = btn.getBoundingClientRect();
+    popup.style.top = (rect.bottom + 8) + 'px';
+    popup.style.left = Math.min(rect.left, window.innerWidth - 440) + 'px';
+    popup.classList.add('visible');
+
+    popup.querySelector('.close-btn').addEventListener('click', () => popup.classList.remove('visible'));
+  }
+
+  // Clickable metric cards navigation
+  const navCard = e.target.closest('.card-clickable');
+  if (navCard) {
+    const tabId = navCard.dataset.navTab;
+    const subtabId = navCard.dataset.navSubtab;
+    if (tabId) {
+      // Activate main tab
+      document.querySelectorAll('.tab-bar:first-of-type .tab, #app > .tab-bar .tab').forEach(t => {
+        if (t.dataset.tab) t.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+      const mainTab = document.querySelector(`.tab[data-tab="${tabId}"]`);
+      if (mainTab) mainTab.classList.add('active');
+      const tabContent = document.getElementById('tab-' + tabId);
+      if (tabContent) tabContent.classList.add('active');
+
+      // Activate sub-tab if specified
+      if (subtabId && tabContent) {
+        tabContent.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.remove('active'));
+        tabContent.querySelectorAll('.subtab-content').forEach(sc => sc.classList.remove('active'));
+        const subTab = tabContent.querySelector(`.tab[data-subtab="${subtabId}"]`);
+        if (subTab) subTab.classList.add('active');
+        const subContent = tabContent.querySelector('#subtab-' + subtabId);
+        if (subContent) subContent.classList.add('active');
+      }
+
+      initAllTables();
+    }
+  }
+});
+</script>
+</body>
+</html>

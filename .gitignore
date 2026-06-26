@@ -1,0 +1,17 @@
+# Generated data files (contain sensitive Jira ticket data)
+tickets.json
+duplicate_candidates.json
+obsolete_candidates.json
+priority_scores.json
+triage-data.js
+triage-report-standalone.html
+triage-log.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
