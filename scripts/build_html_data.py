@@ -29,8 +29,24 @@ def load_json(path):
 
 
 def append_log(metrics):
-    """Append a metrics snapshot row to triage-log.csv."""
+    """Append a metrics snapshot row to triage-log.csv.
+
+    Skips if the last row has identical values (avoids duplicate entries
+    from multiple runs on the same day with no changes).
+    """
     file_exists = LOG_FILE.exists()
+    if file_exists:
+        with open(LOG_FILE) as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+        if rows:
+            last = rows[-1]
+            # Compare all fields except date
+            same = all(str(metrics.get(k, '')) == str(last.get(k, '')) for k in LOG_HEADERS if k != 'date')
+            if same:
+                print(f"Metrics unchanged, skipping log append.")
+                return
+
     with open(LOG_FILE, "a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=LOG_HEADERS)
         if not file_exists:

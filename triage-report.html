@@ -229,18 +229,6 @@ function render() {
   html += `<h1>OCMUI Backlog Triage Report <span class="unlock-indicator" id="unlock-indicator">&#128274;</span></h1>`;
   html += `<div class="meta">Generated: ${new Date(D.meta.generated_at).toLocaleString()}</div>`;
 
-  // Weekly deltas (if previous run data exists)
-  if (D.meta.deltas && Object.keys(D.meta.deltas).length > 0) {
-    html += `<div style="margin:8px 0 12px; padding:8px 14px; background:#1a2332; border:1px solid #333; border-radius:6px; font-size:13px; display:flex; gap:16px; flex-wrap:wrap; align-items:center;">`;
-    html += `<span style="color:#9ca3af; font-weight:600;">Changes since last run:</span>`;
-    const labels = { open: 'Open', stale: 'Stale', frozen: 'Frozen', orphaned: 'Orphaned', obsolete: 'Obsolete', escalated: 'Escalated' };
-    Object.entries(D.meta.deltas).forEach(([key, d]) => {
-      const sign = d.diff > 0 ? '+' : '';
-      const color = d.diff < 0 ? '#22c55e' : d.diff > 0 ? '#ef4444' : '#9ca3af';
-      html += `<span style="color:${color};font-weight:600;">${labels[key] || key}: ${sign}${d.diff}</span>`;
-    });
-    html += `</div>`;
-  }
 
   // Ticket counts matching Jira board layout
   const allTickets = D.tickets || [];
@@ -743,10 +731,23 @@ function renderHistoryTab() {
     byWeek[weekStart].total++;
   });
 
-  // Totals cards
+  // Running total: starting backlog vs current
+  const startingTotal = 929; // Baseline: 2026-06-26
+  const currentTotal = (D.tickets || []).length + (D.stale_tickets || []).length + (D.frozen_tickets || []).length;
   const totalClosed = closeLog.length;
-  html += `<div style="display:flex;gap:16px;margin:12px 0 20px;flex-wrap:wrap;">`;
-  html += `<div class="card card-sm"><div class="value" style="color:#22c55e;">${totalClosed}</div><div class="label">Total Closed</div></div>`;
+  const netReduction = startingTotal - currentTotal;
+
+  // Totals cards
+  html += `<div style="display:flex;gap:16px;margin:12px 0 20px;flex-wrap:wrap;align-items:center;">`;
+  html += `<div class="card card-sm"><div class="value">${startingTotal}</div><div class="label">Started At (6/26)</div></div>`;
+  html += `<span class="card-operator">−</span>`;
+  html += `<div class="card card-sm"><div class="value" style="color:#22c55e;">${totalClosed}</div><div class="label">Total Closed by Triage</div></div>`;
+  html += `<span class="card-operator">=</span>`;
+  html += `<div class="card card-sm" style="border-color:#22c55e;"><div class="value">${currentTotal}</div><div class="label">Current Total</div></div>`;
+  html += `</div>`;
+
+  // Breakdown by category
+  html += `<div style="display:flex;gap:16px;margin:0 0 20px;flex-wrap:wrap;">`;
   Object.entries(byLabel).sort((a,b) => b[1]-a[1]).forEach(([label, count]) => {
     const name = label.replace('triage-closed-', '');
     const color = name === 'orphan' ? '#f59e0b' : name === 'duplicate' ? '#a78bfa' : '#9ca3af';
@@ -806,29 +807,6 @@ function renderHistoryTab() {
   });
   html += `</tbody></table>`;
 
-  // --- Metrics over time ---
-  if (metricsLog.length > 1) {
-    html += `<h3 style="margin-top:32px;">Backlog Metrics Over Time</h3>`;
-    html += `<table id="metrics-history-table"><thead><tr>`;
-    ['Date','Open','Stale','Frozen','Epics','Sprint','Orphaned','Obsolete','Escalated'].forEach(h => {
-      html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
-    });
-    html += `</tr></thead><tbody>`;
-    metricsLog.slice().reverse().forEach(r => {
-      html += `<tr>`;
-      html += `<td class="nowrap">${esc(r.date)}</td>`;
-      html += `<td>${r.open}</td>`;
-      html += `<td>${r.stale}</td>`;
-      html += `<td>${r.frozen}</td>`;
-      html += `<td>${r.epics}</td>`;
-      html += `<td>${r.sprint}</td>`;
-      html += `<td>${r.orphaned}</td>`;
-      html += `<td>${r.obsolete}</td>`;
-      html += `<td>${r.escalated}</td>`;
-      html += `</tr>`;
-    });
-    html += `</tbody></table>`;
-  }
 
   html += `</div>`;
   return html;
