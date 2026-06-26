@@ -26,7 +26,7 @@ import requests
 JIRA_INSTANCE = "redhat.atlassian.net"
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_MANIFEST = BASE_DIR / "close-manifest.json"
-LOG_FILE = BASE_DIR / "triage-log.csv"
+CLOSE_LOG_FILE = BASE_DIR / "close-log.csv"
 
 TRANSITION_CLOSED = "51"
 
@@ -110,10 +110,10 @@ def add_comment(key, reason, auth):
     return resp.status_code == 201
 
 
-def log_closures(items, log_file):
-    """Append closure records to the triage log CSV."""
-    file_exists = log_file.exists()
-    with open(log_file, "a", newline="") as f:
+def log_closures(items):
+    """Append closure records to close-log.csv."""
+    file_exists = CLOSE_LOG_FILE.exists()
+    with open(CLOSE_LOG_FILE, "a", newline="") as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow(["date", "key", "resolution", "label", "reason"])
@@ -126,14 +126,17 @@ def main():
     parser = argparse.ArgumentParser(description="Close Jira tickets from triage manifest")
     parser.add_argument("--execute", action="store_true", help="Actually close tickets (default is dry-run)")
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST, help="Path to close-manifest.json")
+    parser.add_argument("--stdin", action="store_true", help="Read manifest JSON from stdin")
     args = parser.parse_args()
 
-    if not args.manifest.exists():
+    if args.stdin:
+        manifest = json.load(sys.stdin)
+    elif args.manifest.exists():
+        manifest = json.loads(args.manifest.read_text())
+    else:
         print(f"ERROR: Manifest not found: {args.manifest}", file=sys.stderr)
         print("Generate one from the triage report UI (triple-click to unlock close mode).", file=sys.stderr)
         sys.exit(1)
-
-    manifest = json.loads(args.manifest.read_text())
     items = manifest.get("items", [])
 
     if not items:
@@ -191,8 +194,8 @@ def main():
     print(f"\nDone: {success} closed, {failed} failed")
 
     if success > 0:
-        log_closures([item for item in items], LOG_FILE)
-        print(f"Logged to: {LOG_FILE}")
+        log_closures(items)
+        print(f"Logged to: {CLOSE_LOG_FILE}")
 
 
 if __name__ == "__main__":

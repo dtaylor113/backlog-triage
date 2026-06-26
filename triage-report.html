@@ -286,6 +286,7 @@ function render() {
   html += `<div class="tab" data-tab="obsolete">Obsolete Candidates</div>`;
   html += `<div class="tab" data-tab="duplicates">Possible Duplicates</div>`;
   html += `<div class="tab" data-tab="cleanup">Orphaned Issues</div>`;
+  html += `<div class="tab" data-tab="history">Triage History</div>`;
   html += `</div>`;
 
   html += renderPrioritiesTab();
@@ -293,6 +294,7 @@ function render() {
   html += renderDuplicatesTab();
   html += renderCleanupTab();
   html += renderLifecycleTab();
+  html += renderHistoryTab();
 
   app.innerHTML = html;
   initTabs();
@@ -598,11 +600,11 @@ function renderCleanupTab() {
     const group = byParent[pk];
     const parentSummary = group.summary ? esc(group.summary) : '';
     const childRows = group.children.map(t =>
-      `<tr><td class="close-col"><input type="checkbox" class="close-cb" data-key="${esc(t.key)}" onchange="updateCloseFooter()"></td><td class="nowrap">${jiraLink(t.key)}</td><td>${esc(t.summary)}</td><td>${esc(t.type)}</td><td>${esc(t.status)}</td></tr>`
+      `<tr><td class="close-col"><input type="checkbox" class="close-cb" data-key="${esc(t.key)}" onchange="syncOrphanParent(this)"></td><td class="nowrap">${jiraLink(t.key)}</td><td>${esc(t.summary)}</td><td>${esc(t.type)}</td><td>${esc(t.status)}</td></tr>`
     ).join('');
 
     html += `<tr class="orphan-parent-row" onclick="this.classList.toggle('expanded');this.nextElementSibling.classList.toggle('visible');">`;
-    html += `<td class="close-col" onclick="event.stopPropagation();"><input type="checkbox" class="close-parent-cb" onchange="updateCloseFooter()"></td>`;
+    html += `<td class="close-col" onclick="event.stopPropagation();"><input type="checkbox" class="close-parent-cb" onchange="toggleOrphanChildren(this)"></td>`;
     html += `<td class="nowrap"><span class="orphan-toggle">&#9654;</span> ${jiraLink(pk)}</td>`;
     html += `<td>${esc(group.type)}</td>`;
     html += `<td>${parentSummary}</td>`;
@@ -707,6 +709,137 @@ function renderLifecycleTable(tableId, tickets, {showEstClose = true, hideGenera
 
   html += `</tbody></table>`;
   return html;
+}
+
+function renderHistoryTab() {
+  const closeLog = D.close_log || [];
+  const metricsLog = D.metrics_log || [];
+
+  let html = `<div class="tab-content" id="tab-history">`;
+
+  if (!closeLog.length && !metricsLog.length) {
+    html += `<p style="color:#9ca3af;margin:24px 0;">No triage history yet. Run the pipeline and close tickets to build history.</p>`;
+    html += `</div>`;
+    return html;
+  }
+
+  // --- Closures summary ---
+  html += `<h3>Tickets Closed via Triage</h3>`;
+
+  // Group closures by week and label
+  const byWeek = {};
+  const byLabel = {};
+  const byResolution = {};
+  closeLog.forEach(r => {
+    const date = r.date || '';
+    const weekStart = getWeekStart(date);
+    byWeek[weekStart] = byWeek[weekStart] || { orphan: 0, duplicate: 0, obsolete: 0, total: 0 };
+    byLabel[r.label] = (byLabel[r.label] || 0) + 1;
+    byResolution[r.resolution] = (byResolution[r.resolution] || 0) + 1;
+
+    if ((r.label || '').includes('orphan')) byWeek[weekStart].orphan++;
+    else if ((r.label || '').includes('duplicate')) byWeek[weekStart].duplicate++;
+    else if ((r.label || '').includes('obsolete')) byWeek[weekStart].obsolete++;
+    byWeek[weekStart].total++;
+  });
+
+  // Totals cards
+  const totalClosed = closeLog.length;
+  html += `<div style="display:flex;gap:16px;margin:12px 0 20px;flex-wrap:wrap;">`;
+  html += `<div class="card card-sm"><div class="value" style="color:#22c55e;">${totalClosed}</div><div class="label">Total Closed</div></div>`;
+  Object.entries(byLabel).sort((a,b) => b[1]-a[1]).forEach(([label, count]) => {
+    const name = label.replace('triage-closed-', '');
+    const color = name === 'orphan' ? '#f59e0b' : name === 'duplicate' ? '#a78bfa' : '#9ca3af';
+    html += `<div class="card card-sm"><div class="value" style="color:${color};">${count}</div><div class="label">${name}</div></div>`;
+  });
+  html += `</div>`;
+
+  // Bar chart by week
+  const weeks = Object.keys(byWeek).sort();
+  if (weeks.length) {
+    const maxTotal = Math.max(...weeks.map(w => byWeek[w].total));
+
+    html += `<h3 style="margin-top:24px;">Closures by Week</h3>`;
+    html += `<div style="margin:12px 0;">`;
+    weeks.forEach(week => {
+      const w = byWeek[week];
+      const barMax = 300;
+      const orphanW = maxTotal ? Math.round((w.orphan / maxTotal) * barMax) : 0;
+      const dupW = maxTotal ? Math.round((w.duplicate / maxTotal) * barMax) : 0;
+      const obsW = maxTotal ? Math.round((w.obsolete / maxTotal) * barMax) : 0;
+
+      html += `<div style="display:flex;align-items:center;gap:10px;margin:6px 0;">`;
+      html += `<span style="min-width:90px;font-size:12px;color:#9ca3af;">${week}</span>`;
+      html += `<div style="display:flex;height:20px;border-radius:3px;overflow:hidden;">`;
+      if (orphanW) html += `<div style="width:${orphanW}px;background:#f59e0b;" title="Orphaned: ${w.orphan}"></div>`;
+      if (dupW) html += `<div style="width:${dupW}px;background:#a78bfa;" title="Duplicate: ${w.duplicate}"></div>`;
+      if (obsW) html += `<div style="width:${obsW}px;background:#6b7280;" title="Obsolete: ${w.obsolete}"></div>`;
+      html += `</div>`;
+      html += `<span style="font-size:12px;color:#e5e7eb;font-weight:600;">${w.total}</span>`;
+      html += `</div>`;
+    });
+    html += `</div>`;
+
+    // Legend
+    html += `<div style="display:flex;gap:16px;margin:8px 0 20px;font-size:12px;">`;
+    html += `<span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Orphaned</span>`;
+    html += `<span><span style="display:inline-block;width:12px;height:12px;background:#a78bfa;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Duplicate</span>`;
+    html += `<span><span style="display:inline-block;width:12px;height:12px;background:#6b7280;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Obsolete</span>`;
+    html += `</div>`;
+  }
+
+  // --- Closure detail table ---
+  html += `<h3 style="margin-top:24px;">Closure Log</h3>`;
+  html += `<table id="history-table"><thead><tr>`;
+  ['Date','Key','Resolution','Label','Reason'].forEach(h => {
+    html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
+  });
+  html += `</tr></thead><tbody>`;
+  closeLog.slice().reverse().forEach(r => {
+    html += `<tr>`;
+    html += `<td class="nowrap">${esc(r.date)}</td>`;
+    html += `<td class="nowrap">${jiraLink(r.key)}</td>`;
+    html += `<td>${esc(r.resolution)}</td>`;
+    html += `<td><code style="font-size:11px;">${esc(r.label)}</code></td>`;
+    html += `<td>${esc(r.reason)}</td>`;
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+
+  // --- Metrics over time ---
+  if (metricsLog.length > 1) {
+    html += `<h3 style="margin-top:32px;">Backlog Metrics Over Time</h3>`;
+    html += `<table id="metrics-history-table"><thead><tr>`;
+    ['Date','Open','Stale','Frozen','Epics','Sprint','Orphaned','Obsolete','Escalated'].forEach(h => {
+      html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
+    });
+    html += `</tr></thead><tbody>`;
+    metricsLog.slice().reverse().forEach(r => {
+      html += `<tr>`;
+      html += `<td class="nowrap">${esc(r.date)}</td>`;
+      html += `<td>${r.open}</td>`;
+      html += `<td>${r.stale}</td>`;
+      html += `<td>${r.frozen}</td>`;
+      html += `<td>${r.epics}</td>`;
+      html += `<td>${r.sprint}</td>`;
+      html += `<td>${r.orphaned}</td>`;
+      html += `<td>${r.obsolete}</td>`;
+      html += `<td>${r.escalated}</td>`;
+      html += `</tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function getWeekStart(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(d.setDate(diff));
+  return monday.toISOString().slice(0, 10);
 }
 
 function toggleGeneratedRows(tableId, show) {
@@ -990,20 +1123,8 @@ document.addEventListener('click', (e) => {
     popup.querySelector('.close-btn').addEventListener('click', () => popup.classList.remove('visible'));
   }
 
-  // Close mode checkbox handling
-  const cb = e.target.closest('.close-cb');
-  if (cb) { e.stopPropagation(); updateCloseFooter(); return; }
-  const parentCb = e.target.closest('.close-parent-cb');
-  if (parentCb) {
-    e.stopPropagation();
-    const row = parentCb.closest('.orphan-parent-row');
-    const detail = row?.nextElementSibling;
-    if (detail) {
-      detail.querySelectorAll('.close-cb').forEach(c => { c.checked = parentCb.checked; });
-    }
-    updateCloseFooter();
-    return;
-  }
+  // Close mode checkbox handling — prevent row expand/collapse when clicking checkboxes
+  if (e.target.closest('.close-cb') || e.target.closest('.close-parent-cb')) return;
 
   // Clickable metric cards navigation
   const navCard = e.target.closest('.card-clickable');
@@ -1058,6 +1179,28 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// --- Orphan checkbox sync ---
+function toggleOrphanChildren(parentCb) {
+  const row = parentCb.closest('.orphan-parent-row');
+  const detail = row?.nextElementSibling;
+  if (detail) {
+    detail.querySelectorAll('.close-cb').forEach(c => { c.checked = parentCb.checked; });
+  }
+  updateCloseFooter();
+}
+
+function syncOrphanParent(childCb) {
+  const detailRow = childCb.closest('.orphan-detail-row');
+  if (!detailRow) { updateCloseFooter(); return; }
+  const parentRow = detailRow.previousElementSibling;
+  const parentCbEl = parentRow?.querySelector('.close-parent-cb');
+  if (parentCbEl) {
+    const allChildren = detailRow.querySelectorAll('.close-cb');
+    parentCbEl.checked = Array.from(allChildren).every(c => c.checked);
+  }
+  updateCloseFooter();
+}
+
 // --- Close footer management ---
 function getSelectedTickets() {
   const selected = [];
@@ -1107,46 +1250,59 @@ function showCloseModal() {
 
   let listHtml = '';
   if (byCategory.orphan.length) {
-    listHtml += `<h4 style="color:#f59e0b;margin:8px 0 4px;">Orphaned → Resolution: Won't Do</h4><ul class="close-modal-list">`;
+    listHtml += `<h4 style="color:#f59e0b;margin:8px 0 4px;">Orphaned → Resolution: Won't Do</h4>`;
+    listHtml += `<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Label: <code>triage-closed-orphan</code> · Comment: "Closed via backlog triage — reason: Parent [key] closed"</div>`;
+    listHtml += `<ul class="close-modal-list">`;
     byCategory.orphan.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
     listHtml += `</ul>`;
   }
   if (byCategory.duplicate.length) {
-    listHtml += `<h4 style="color:#a78bfa;margin:8px 0 4px;">Duplicate → Resolution: Duplicate</h4><ul class="close-modal-list">`;
+    listHtml += `<h4 style="color:#a78bfa;margin:8px 0 4px;">Duplicate → Resolution: Duplicate</h4>`;
+    listHtml += `<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Label: <code>triage-closed-duplicate</code> · Comment: "Closed via backlog triage — reason: Duplicate under [parent]"</div>`;
+    listHtml += `<ul class="close-modal-list">`;
     byCategory.duplicate.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
     listHtml += `</ul>`;
   }
   if (byCategory.obsolete.length) {
-    listHtml += `<h4 style="color:#9ca3af;margin:8px 0 4px;">Obsolete → Resolution: Obsolete</h4><ul class="close-modal-list">`;
+    listHtml += `<h4 style="color:#9ca3af;margin:8px 0 4px;">Obsolete → Resolution: Obsolete</h4>`;
+    listHtml += `<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Label: <code>triage-closed-obsolete</code> · Comment: "Closed via backlog triage — reason: Obsolete candidate (stale references)"</div>`;
+    listHtml += `<ul class="close-modal-list">`;
     byCategory.obsolete.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
     listHtml += `</ul>`;
   }
 
   modal.innerHTML = `
     <h3>Confirm Close — ${selected.length} ticket${selected.length !== 1 ? 's' : ''}</h3>
-    <p style="color:#9ca3af;font-size:13px;">These tickets will be closed with the listed resolutions. A <code>close-manifest.json</code> will be downloaded for processing.</p>
+    <p style="color:#9ca3af;font-size:13px;">For each ticket, the script will:</p>
+    <ol style="color:#9ca3af;font-size:13px;margin:4px 0 8px 20px;">
+      <li>Add the triage label</li>
+      <li>Transition to Closed with the resolution</li>
+      <li>Add an explanatory comment</li>
+    </ol>
+    <p style="color:#9ca3af;font-size:13px;">Click <strong>Copy CLI cmd</strong> to copy the command to your clipboard, then paste into your terminal to execute.</p>
     ${listHtml}
     <div class="close-modal-actions">
-      <button class="modal-cancel" onclick="document.getElementById('close-modal-overlay').classList.remove('visible')">Cancel</button>
-      <button class="modal-confirm" onclick="downloadManifest()">Confirm &amp; Download Manifest</button>
+      <button class="modal-cancel" onclick="document.getElementById('close-modal-overlay').classList.remove('visible')">Close</button>
+      <button class="modal-confirm" onclick="copyCliCommand()">Copy CLI cmd</button>
     </div>`;
   overlay.classList.add('visible');
 }
 
-function downloadManifest() {
+function copyCliCommand() {
   const selected = getSelectedTickets();
   const manifest = {
     generated_at: new Date().toISOString(),
     items: selected.map(s => ({ key: s.key, resolution: s.resolution, label: s.label, reason: s.reason }))
   };
-  const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'close-manifest.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  document.getElementById('close-modal-overlay').classList.remove('visible');
+  const json = JSON.stringify(manifest, null, 2);
+  const cmd = `cd ~/repos/work/AI/backlog-triage && python3 scripts/close_tickets.py --execute --stdin <<'EOF'\n${json}\nEOF`;
+  navigator.clipboard.writeText(cmd).then(() => {
+    const btn = document.querySelector('.modal-confirm');
+    const original = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.style.background = '#22c55e';
+    setTimeout(() => { btn.textContent = original; btn.style.background = ''; }, 2000);
+  });
 }
 </script>
 </body>

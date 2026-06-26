@@ -13,6 +13,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_FILE = BASE_DIR / "triage-data.js"
 LOG_FILE = BASE_DIR / "triage-log.csv"
+CLOSE_LOG_FILE = BASE_DIR / "close-log.csv"
 
 LOG_HEADERS = [
     "date", "open", "stale", "frozen", "epics", "sprint",
@@ -46,6 +47,24 @@ def load_previous_log():
         reader = csv.DictReader(f)
         rows = list(reader)
     return rows[-1] if rows else None
+
+
+def load_close_log():
+    """Load all closure records from close-log.csv."""
+    if not CLOSE_LOG_FILE.exists():
+        return []
+    with open(CLOSE_LOG_FILE) as f:
+        reader = csv.DictReader(f)
+        return list(reader)
+
+
+def load_metrics_log():
+    """Load all metrics snapshots from triage-log.csv."""
+    if not LOG_FILE.exists():
+        return []
+    with open(LOG_FILE) as f:
+        reader = csv.DictReader(f)
+        return list(reader)
 
 
 def main():
@@ -84,6 +103,10 @@ def main():
             if diff != 0:
                 deltas[k] = {"prev": prev_val, "current": current[k], "diff": diff}
 
+    # Load history for the Triage History tab
+    close_log = load_close_log()
+    metrics_log = load_metrics_log()
+
     data = {
         "meta": {
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
@@ -99,6 +122,8 @@ def main():
         "tickets": all_tickets,
         "stale_tickets": stale_tickets,
         "frozen_tickets": frozen_tickets,
+        "close_log": close_log,
+        "metrics_log": metrics_log,
     }
 
     js_content = (
