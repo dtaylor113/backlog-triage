@@ -55,9 +55,9 @@ def get_auth():
 
 
 def add_label(key, label, auth):
-    """Add a label to a Jira issue."""
+    """Add a triage-closed label and remove any prior triage-reverted label."""
     url = f"https://{JIRA_INSTANCE}/rest/api/3/issue/{key}"
-    payload = {"update": {"labels": [{"add": label}]}}
+    payload = {"update": {"labels": [{"add": label}, {"remove": "triage-reverted"}]}}
     resp = requests.put(url, json=payload, auth=auth)
     if resp.status_code == 429:
         time.sleep(int(resp.headers.get("Retry-After", 5)))
