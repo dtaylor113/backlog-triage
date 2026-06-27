@@ -1148,7 +1148,14 @@ const INFO_CONTENT = {
 <li><strong>Pipeline</strong> \u2014 7 Python scripts run sequentially: fetch \u2192 detect duplicates \u2192 detect obsolete \u2192 score priorities \u2192 report \u2192 build data \u2192 build standalone</li>
 <li><strong>Output</strong> \u2014 Single self-contained HTML file (no server required) with embedded JSON data</li>
 </ul>
-<p style="margin-top:10px;color:#9ca3af;font-size:0.85em;">Source: <a href="https://github.com/dtaylor113/backlog-triage" style="color:#60a5fa;" target="_blank">github.com/dtaylor113/backlog-triage</a></p>`,
+<p style="margin-top:10px;color:#9ca3af;font-size:0.85em;">Source: <a href="https://github.com/dtaylor113/backlog-triage" style="color:#60a5fa;" target="_blank">github.com/dtaylor113/backlog-triage</a></p>
+
+<h5>Security Precautions</h5>
+<ul style="margin:6px 0 0 16px;">
+<li><strong>No credentials in the repo</strong> \u2014 Jira API tokens and email are read exclusively from environment variables (<code>$JIRA_EMAIL</code>, <code>$JIRA_TOKEN</code>). No secrets, tokens, or passwords are stored in source control.</li>
+<li><strong>No raw data committed</strong> \u2014 Fetched ticket data, embeddings, and generated CSV logs are all in <code>.gitignore</code>. The repository contains only scripts and the HTML template.</li>
+<li><strong>Private distribution only</strong> \u2014 The standalone HTML file is shared exclusively via a private Slack channel visible only to the OCMUI team. It is not hosted on any public URL.</li>
+</ul>`,
 };
 
 document.addEventListener('click', (e) => {
