@@ -1151,7 +1151,7 @@ const INFO_CONTENT = {
 <h5>Closing & Reverting Tickets</h5>
 <p>This report includes interactive controls for closing and reverting tickets directly from the dashboard.</p>
 <ul style="margin:6px 0 0 16px;">
-<li><strong>Close mode</strong> \u2014 Activate close mode to reveal checkboxes in the Obsolete, Duplicates, and Orphaned tabs. Select tickets, click \u201cClose Selected\u201d, review the confirmation dialog, then copy the CLI command to execute in your terminal.</li>
+<li><strong>Close mode</strong> \u2014 Activate close mode to reveal checkboxes in the Obsolete, Duplicates, and Orphaned tabs. Select tickets, click \u201cClose Selected\u201d, review the confirmation dialog, then copy the CLI command to execute in your terminal. <strong><em>CLI commands require a terminal with the correct environment variables configured. See Security Precautions above.</em></strong></li>
 <li><strong>Closures apply</strong> a Jira label (<code>triage-closed-orphan</code>, <code>triage-closed-duplicate</code>, or <code>triage-closed-obsolete</code>) and set the appropriate resolution (Won\u2019t Do, Duplicate, or Obsolete). Nothing disappears silently.</li>
 <li><strong>Revert mode</strong> \u2014 Activate revert mode in the Close History tab to reveal checkboxes in the Closure Log. Select tickets to revert, review the confirmation, and copy the CLI command.</li>
 <li><strong>Revert restores</strong> the ticket\u2019s previous status (looked up from the Jira changelog), removes the <code>triage-closed-*</code> label, and adds <code>triage-reverted</code>.</li>
