@@ -4,10 +4,12 @@
 Extracts UI element references (routes, component names, file paths) from ticket
 descriptions and checks whether they still exist in the codebase.
 
-Confidence tiers:
-- High: ticket references a component/route deleted from src/
-- Medium: ticket references a wizard step significantly refactored
-- Low: 18+ months old, 0 comments in 12 months, reporter gone
+Score breakdown:
+- +40: ticket references a route or file that no longer exists in the repo
+- +20: ticket references a component name not found in src/
+- +15: ticket is 18+ months old
+- +15: no activity in 12+ months
+- +10: reporter no longer on team (combined with age)
 """
 
 import json
@@ -72,16 +74,46 @@ def get_src_components():
 
 def get_routes():
     """Extract route definitions from the codebase."""
+    routes = set()
+
+    # Pattern 1: JSX path/to attributes (path="/create", to="/details/:id")
     result = subprocess.run(
         ["rg", "--no-heading", "-oP", r"(?:path|to)=['\"]([^'\"]+)['\"]", "src/"],
         capture_output=True, text=True, cwd=REPO_ROOT
     )
-    routes = set()
     for line in result.stdout.strip().split("\n"):
         match = re.search(r"['\"]([/][^'\"]+)['\"]", line)
         if match:
             routes.add(match.group(1))
+
+    # Pattern 2: Route path constants (export const FOO_PATH = '/foo')
+    result2 = subprocess.run(
+        ["rg", "--no-heading", "-oP", r"(?:PATH|_PATH|_ROUTE)\s*=\s*['\"]([^'\"]+)['\"]", "src/"],
+        capture_output=True, text=True, cwd=REPO_ROOT
+    )
+    for line in result2.stdout.strip().split("\n"):
+        match = re.search(r"['\"]([/][^'\"]+)['\"]", line)
+        if match:
+            routes.add(match.group(1))
+
     return routes
+
+
+def normalize_file_reference(filepath):
+    """Strip GitHub blob URL prefixes to get the repo-relative path.
+    
+    Handles patterns like:
+      /blob/master/src/components/Foo.tsx -> src/components/Foo.tsx
+      portal/blob/<sha>/src/components/Foo.tsx -> src/components/Foo.tsx
+      chrome/blob/master/src/... -> src/...  (external repo, keep as-is for miss)
+    """
+    # Strip leading slash
+    path = filepath.lstrip("/")
+    # Remove blob/<branch-or-sha>/ prefix (with optional repo name before it)
+    match = re.match(r'(?:[\w-]+/)?blob/[^/]+/(.*)', path)
+    if match:
+        return match.group(1)
+    return path
 
 
 def extract_references(description):
@@ -98,14 +130,34 @@ def extract_references(description):
 
     text = description.lower()
 
-    route_patterns = re.findall(r'/openshift[/\w-]*', description, re.IGNORECASE)
-    refs["routes"] = list(set(route_patterns))
+    # Extract /openshift/... routes and normalize by stripping the /openshift prefix
+    # Only match /openshift followed by / (app route prefix), not /openshift-v4 etc.
+    route_patterns = re.findall(r'/openshift/[\w/:-]*', description, re.IGNORECASE)
+    normalized_routes = []
+    for route in route_patterns:
+        relative = re.sub(r'^/openshift', '', route)
+        if relative and relative != '/':
+            normalized_routes.append(relative)
+    refs["routes"] = list(set(normalized_routes))
 
+    # Extract file references — filter out non-source noise
     file_patterns = re.findall(
-        r'[\w/]+\.(?:tsx?|jsx?|css|scss)',
+        r'[\w/.@-]+\.(?:tsx?|jsx?|css|scss)',
         description, re.IGNORECASE
     )
-    refs["files"] = list(set(file_patterns))
+    cleaned_files = []
+    for fp in file_patterns:
+        normalized = normalize_file_reference(fp)
+        # Skip obviously non-repo files (bundled hashes, node_modules, external)
+        if re.match(r'^[a-f0-9]{10,}\.js$', normalized):
+            continue
+        if 'node_modules' in normalized or 'sentry/' in normalized:
+            continue
+        # Skip bare filenames without a path that are too generic (e.g. "Node.js", "package.js")
+        if '/' not in normalized and not normalized.startswith('src'):
+            continue
+        cleaned_files.append(normalized)
+    refs["files"] = list(set(cleaned_files))
 
     component_patterns = re.findall(
         r'\b([A-Z][a-zA-Z]+(?:Screen|Page|Modal|Drawer|Wizard|Form|Panel|Tab|Step|Dialog|View))\b',
@@ -122,13 +174,36 @@ def extract_references(description):
     return refs
 
 
+def route_matches(ticket_route, codebase_route):
+    """Check if a ticket's route reference matches a codebase route definition.
+    
+    Handles parameterized routes like /details/:id matching /details/00000000.
+    """
+    # Direct substring match (either direction)
+    if ticket_route in codebase_route or codebase_route in ticket_route:
+        return True
+    # Compare the static prefix of the codebase route (up to first :param)
+    # against the ticket route
+    parts = codebase_route.split("/")
+    static_parts = []
+    for part in parts:
+        if part.startswith(":") or part == "*":
+            break
+        static_parts.append(part)
+    if len(static_parts) > 1:
+        static_prefix = "/".join(static_parts)
+        if ticket_route.startswith(static_prefix):
+            return True
+    return False
+
+
 def check_references_against_codebase(refs, src_components, src_dirs, src_files, routes):
     """Check if extracted references still exist in the codebase."""
     findings = []
 
     for route in refs["routes"]:
         route_normalized = route.rstrip("/")
-        found = any(route_normalized in r for r in routes)
+        found = any(route_matches(route_normalized, r) for r in routes)
         if not found:
             findings.append({
                 "type": "route",
@@ -138,7 +213,13 @@ def check_references_against_codebase(refs, src_components, src_dirs, src_files,
 
     for filepath in refs["files"]:
         normalized = filepath.lower()
-        found = any(normalized in f.lower() for f in src_files)
+        # Check if the file path (or its basename) matches any tracked file
+        basename = Path(filepath).name.lower()
+        found = (
+            any(normalized in f.lower() for f in src_files) or
+            any(f.lower().endswith(normalized) for f in src_files) or
+            any(basename == Path(f).name.lower() for f in src_files)
+        )
         if not found:
             findings.append({
                 "type": "file",
@@ -183,9 +264,10 @@ def main():
     print(f"  {len(member_emails)} team member emails loaded")
 
     print("\nScanning codebase...")
-    src_components, src_dirs, src_files = get_src_components()
+    src_components, src_dirs, _ = get_src_components()
+    all_files = get_codebase_files()
     routes = get_routes()
-    print(f"  {len(src_files)} tracked files, {len(src_components)} component names, {len(routes)} routes")
+    print(f"  {len(all_files)} tracked files, {len(src_components)} component names, {len(routes)} routes")
 
     print("\nAnalyzing tickets for obsolescence...")
     candidates = []
@@ -196,7 +278,7 @@ def main():
 
         refs = extract_references(ticket["description"])
         codebase_findings = check_references_against_codebase(
-            refs, src_components, src_dirs, src_files, routes
+            refs, src_components, src_dirs, all_files, routes
         )
 
         if codebase_findings:
