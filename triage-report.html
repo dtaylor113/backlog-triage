@@ -897,7 +897,7 @@ function initAllTables() {
     headers.forEach((th, colIdx) => {
       th.addEventListener('click', (e) => {
         if (e.target.classList.contains('resize-handle')) return;
-        if (e.target.closest('.info-btn')) return;
+        if (e.target.closest('.info-btn, .info-btn-lg')) return;
         sortTable(table, colIdx, th);
       });
       // Resize handles
@@ -1152,7 +1152,7 @@ const INFO_CONTENT = {
 };
 
 document.addEventListener('click', (e) => {
-  const btn = e.target.closest('.info-btn');
+  const btn = e.target.closest('.info-btn, .info-btn-lg');
   const existing = document.querySelector('.info-popup.visible');
 
   if (existing && (!btn || existing.dataset.source !== btn.dataset.info)) {
