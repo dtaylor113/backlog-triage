@@ -250,30 +250,19 @@ function render() {
   html += `<div class="card" style="border-color:#60a5fa;"><div class="value">${totalAll}</div><div class="label">Total</div></div>`;
   html += `</div>`;
 
-  // Analysis metrics row (clickable)
-  html += `<div class="summary-cards metrics-row">`;
-  {
-    const dupGroups = findDuplicateGeneratedTickets();
-    const dupParentCount = [...new Set(dupGroups.map(g => g.parentKey))].length;
-    html += `<div class="card card-sm card-clickable" data-nav-tab="duplicates"><div class="value">${dupParentCount}</div><div class="label">Possible Duplicates</div></div>`;
-  }
-  if (D.obsolete) html += `<div class="card card-sm card-clickable" data-nav-tab="obsolete"><div class="value">${D.obsolete.obsolete_candidates_found}</div><div class="label">Obsolete Candidates</div></div>`;
-  if (D.priorities) {
-    html += `<div class="card card-sm card-clickable" data-nav-tab="priorities"><div class="value">${D.priorities.auto_escalated_count}</div><div class="label">Auto-Escalated</div></div>`;
-  }
-  {
-    const orphanedCount = D.tickets.filter(t => t.parent_status === 'Closed' || t.parent_status === 'Done').length;
-    html += `<div class="card card-sm card-clickable" data-nav-tab="cleanup"><div class="value" style="color:#ef4444;">${orphanedCount}</div><div class="label">Orphaned</div></div>`;
-  }
-  html += `</div>`;
+  // Tabs (with counts)
+  const escalatedCount = D.priorities ? D.priorities.auto_escalated_count : 0;
+  const obsoleteCount = D.obsolete ? D.obsolete.obsolete_candidates_found : 0;
+  const dupGroups = findDuplicateGeneratedTickets();
+  const dupTicketCount = dupGroups.reduce((sum, g) => sum + g.tickets.length, 0);
+  const orphanedCount = D.tickets.filter(t => t.parent_status === 'Closed' || t.parent_status === 'Done').length;
 
-  // Tabs
   html += `<div class="tab-bar">`;
-  html += `<div class="tab active" data-tab="priorities">Priority Scoring</div>`;
+  html += `<div class="tab active" data-tab="priorities">Priority Scoring (${escalatedCount} Auto-Escalated)</div>`;
   html += `<div class="tab" data-tab="lifecycle">Lifecycle</div>`;
-  html += `<div class="tab" data-tab="obsolete">Obsolete Candidates</div>`;
-  html += `<div class="tab" data-tab="duplicates">Possible Duplicates</div>`;
-  html += `<div class="tab" data-tab="cleanup">Orphaned Issues</div>`;
+  html += `<div class="tab" data-tab="obsolete">Obsolete Candidates (${obsoleteCount})</div>`;
+  html += `<div class="tab" data-tab="duplicates">Possible Duplicates (${dupTicketCount})</div>`;
+  html += `<div class="tab" data-tab="cleanup">Orphaned Issues (${orphanedCount})</div>`;
   html += `<div class="tab" data-tab="history">Triage History</div>`;
   html += `</div>`;
 
@@ -366,7 +355,7 @@ function renderObsoleteTab() {
   const candidates = D.obsolete.candidates;
   let html = `<div class="tab-content" id="tab-obsolete">`;
 
-  html += `<h3>Obsolete Candidates (${candidates.length} total)</h3>`;
+  html += `<h3>Obsolete Candidates (${candidates.length} total) <span class="info-btn" data-info="obsolete-total-info">?</span></h3>`;
   html += `<div style="margin:8px 0 12px;color:#9ca3af;">High: ${D.obsolete.by_confidence.high} | Medium: ${D.obsolete.by_confidence.medium} | Low: ${D.obsolete.by_confidence.low}</div>`;
 
   // Filter
@@ -1060,6 +1049,17 @@ const INFO_CONTENT = {
 <li>Gray — more than 20 days remaining</li>
 </ul>
 <p style="margin-top:8px;color:#9ca3af;font-size:0.85em;">To rescue a ticket: remove the <code>lifecycle-stale</code> label or add <code>lifecycle-frozen</code>. Any activity resets the timer.</p>`,
+
+  'obsolete-total-info': `<h4>How is this count determined?</h4>
+<p>A ticket appears in this list when its <strong>Obsolete Score reaches 20+</strong>. The score is computed by cross-referencing each ticket against the current codebase and team data:</p>
+<table><thead><tr><th>Signal</th><th>Points</th></tr></thead><tbody>
+<tr><td>References a deleted route or file in <code>src/</code></td><td>+40</td></tr>
+<tr><td>References a refactored/renamed component</td><td>+20</td></tr>
+<tr><td>Ticket age \u2265 18 months</td><td>+15</td></tr>
+<tr><td>No activity in \u2265 12 months</td><td>+15</td></tr>
+<tr><td>Reporter no longer on the team</td><td>+10</td></tr>
+</tbody></table>
+<p>Any ticket scoring \u2265 20 from these signals is included. It is <strong>not</strong> a date-range filter \u2014 a 6-month-old ticket referencing a deleted route (+40) qualifies, while a 24-month-old ticket with recent activity may not.</p>`,
 
   'obsolete-score-info': `<h4>Obsolete Score</h4>
 <p>A composite score indicating how likely the ticket is obsolete:</p>
