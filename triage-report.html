@@ -208,6 +208,23 @@ body.priority-mode .priority-footer.has-selection { display: flex; }
 }
 .priority-footer .priority-btn-action:hover { background: #3b82f6; }
 
+/* Priority revert mode (hidden until triple-click on Accepted box) */
+.priority-revert-col { display: none; }
+body.priority-revert-mode .priority-revert-col { display: table-cell; }
+.priority-revert-col input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: #f59e0b; }
+.priority-revert-footer {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
+  background: #1f2937; border-top: 2px solid #f59e0b; padding: 10px 24px;
+  align-items: center; justify-content: space-between; gap: 16px;
+}
+body.priority-revert-mode .priority-revert-footer.has-selection { display: flex; }
+.priority-revert-footer .priority-revert-count { color: #e5e7eb; font-weight: 600; }
+.priority-revert-footer .priority-revert-btn-action {
+  background: #f59e0b; color: #000; border: none; border-radius: 6px;
+  padding: 8px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.priority-revert-footer .priority-revert-btn-action:hover { background: #d97706; }
+
 /* Freeze mode (hidden until triple-click on Lifecycle tab) */
 .freeze-col { display: none; }
 body.freeze-mode .freeze-col { display: table-cell; }
@@ -264,6 +281,13 @@ body.revert-mode .revert-footer.has-selection { display: flex; }
   <button class="priority-btn-action" onclick="showPriorityModal()">Set Priority</button>
 </div>
 <div class="close-modal-overlay" id="priority-modal-overlay">
+  <div class="close-modal"></div>
+</div>
+<div class="priority-revert-footer" id="priority-revert-footer">
+  <span class="priority-revert-count">0 tickets selected</span>
+  <button class="priority-revert-btn-action" onclick="showPriorityRevertModal()">Revert Priority</button>
+</div>
+<div class="close-modal-overlay" id="priority-revert-modal-overlay">
   <div class="close-modal"></div>
 </div>
 <div class="freeze-footer" id="freeze-footer">
@@ -376,7 +400,7 @@ function renderPrioritiesTab() {
     const name = label.replace('suggested-priority-','');
     html += `<div style="text-align:center;">${priorityBadge(label)}<div style="font-size:18px;font-weight:700;margin-top:4px;">${count}</div></div>`;
   });
-  html += `<div style="margin-left:24px;text-align:center;padding:8px 16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px;"><div style="font-size:18px;font-weight:700;color:#22c55e;">${acceptedCount}</div><div style="font-size:11px;color:#9ca3af;margin-top:2px;">Suggested Priorities Accepted</div></div>`;
+  html += `<div id="accepted-priority-box" style="margin-left:24px;text-align:center;padding:8px 16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px;cursor:pointer;"><div style="font-size:18px;font-weight:700;color:#22c55e;">${acceptedCount}</div><div style="font-size:11px;color:#9ca3af;margin-top:2px;">Suggested Priorities Accepted</div></div>`;
   html += `</div>`;
 
   // Filter
@@ -391,6 +415,7 @@ function renderPrioritiesTab() {
   // Table
   html += `<table id="priorities-table"><thead><tr>`;
   html += `<th class="priority-col" style="font-size:12px;">Set Priority to Suggested?</th>`;
+  html += `<th class="priority-revert-col" style="font-size:12px;">Revert Suggested Priority?</th>`;
   const priorityHeaders = [
     {name: 'Type'},
     {name: 'Key'},
@@ -411,6 +436,8 @@ function renderPrioritiesTab() {
   html += `</tr></thead><tbody>`;
 
   const PRIORITY_IDS = { blocker: '10000', critical: '10001', major: '10002', normal: '10003', minor: '10004' };
+  const ticketLabelMap = {};
+  allTickets.forEach(t => { ticketLabelMap[t.key] = t.labels || []; });
   scored.forEach(s => {
     const color = scoreColor(s.score);
     const barWidth = Math.min(s.score, 100);
@@ -418,11 +445,20 @@ function renderPrioritiesTab() {
     const currentLower = (s.current_priority || '').toLowerCase();
     const differs = currentLower !== suggestedName;
     const priorityId = PRIORITY_IDS[suggestedName] || '';
-    html += `<tr data-type="${esc(s.type)}" data-label="${esc(s.suggested_label)}">`;
+    const labels = ticketLabelMap[s.key] || [];
+    const origLabel = labels.find(l => l.startsWith('triage-original-priority-'));
+    const hasAccepted = !!origLabel;
+    html += `<tr data-type="${esc(s.type)}" data-label="${esc(s.suggested_label)}" data-accepted="${hasAccepted ? 'yes' : 'no'}">`;
     if (differs) {
       html += `<td class="priority-col"><input type="checkbox" class="priority-cb" data-key="${esc(s.key)}" data-priority-id="${priorityId}" data-priority-name="${suggestedName}" data-original-priority="${currentLower}" data-summary="${esc(s.summary)}" onchange="updatePriorityFooter()"></td>`;
     } else {
       html += `<td class="priority-col"></td>`;
+    }
+    if (hasAccepted) {
+      const origPriority = origLabel.replace('triage-original-priority-', '');
+      html += `<td class="priority-revert-col"><input type="checkbox" class="priority-revert-cb" data-key="${esc(s.key)}" data-summary="${esc(s.summary)}" data-original="${origPriority}" onchange="updatePriorityRevertFooter()"></td>`;
+    } else {
+      html += `<td class="priority-revert-col"></td>`;
     }
     html += `<td>${esc(s.type)}</td>`;
     html += `<td class="nowrap">${jiraLink(s.key)}</td>`;
@@ -904,31 +940,6 @@ function renderHistoryTab() {
   });
   html += `</tbody></table>`;
 
-  // --- Priority Changes section ---
-  const allTickets = [...(D.tickets || []), ...(D.stale_tickets || []), ...(D.frozen_tickets || [])];
-  const priorityChanged = allTickets.filter(t => (t.labels || []).some(l => l.startsWith('triage-original-priority-')));
-  if (priorityChanged.length > 0) {
-    html += `<h3 style="margin-top:24px;">Priority Changes (${priorityChanged.length})</h3>`;
-    html += `<table id="priority-history-table"><thead><tr>`;
-    html += `<th class="revert-col" style="width:auto;font-size:12px;">Revert Priority?</th>`;
-    ['Key','Summary','Current Priority','Original Priority','Label'].forEach(h => {
-      html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
-    });
-    html += `</tr></thead><tbody>`;
-    priorityChanged.forEach(t => {
-      const origLabel = (t.labels || []).find(l => l.startsWith('triage-original-priority-')) || '';
-      const origName = origLabel.replace('triage-original-priority-', '');
-      html += `<tr>`;
-      html += `<td class="revert-col"><input type="checkbox" class="revert-priority-cb" data-key="${esc(t.key)}" data-summary="${esc(t.summary)}" data-original="${origName}" onchange="updateRevertFooter()"></td>`;
-      html += `<td class="nowrap">${jiraLink(t.key)}</td>`;
-      html += `<td>${esc(t.summary)}</td>`;
-      html += `<td>${esc(t.priority)}</td>`;
-      html += `<td>${origName}</td>`;
-      html += `<td><code style="font-size:11px;">${esc(origLabel)}</code></td>`;
-      html += `</tr>`;
-    });
-    html += `</tbody></table>`;
-  }
 
   html += `</div>`;
   return html;
@@ -1257,7 +1268,7 @@ const INFO_CONTENT = {
 <ul style="margin:6px 0 0 16px;">
 <li><strong>Priority mode</strong> \u2014 Activate priority mode to reveal \u201cSet Priority?\u201d checkboxes on rows where the current Jira priority differs from the suggested value.</li>
 <li><strong>Labels for reversibility</strong> \u2014 When a priority is changed, a <code>triage-original-priority-{name}</code> label is added (e.g. <code>triage-original-priority-normal</code>) so the original value is preserved.</li>
-<li><strong>Revert priority</strong> \u2014 In the Close History tab, a \u201cPriority Changes\u201d section lists tickets with modified priorities. Activate revert mode to select tickets for priority restoration.</li>
+<li><strong>Revert priority</strong> \u2014 Triple-click the \u201cSuggested Priorities Accepted\u201d box to filter to accepted tickets and reveal \u201cRevert Suggested Priority?\u201d checkboxes.</li>
 </ul>
 
 <h5>Closing & Reverting Tickets</h5>
@@ -1497,18 +1508,13 @@ function copyCliCommand() {
   });
 }
 
-// --- Revert mode functions ---
+// --- Revert mode functions (closure revert only) ---
 function updateRevertFooter() {
   const footer = document.getElementById('revert-footer');
   if (!footer) return;
-  const closureCbs = document.querySelectorAll('.revert-cb:checked');
-  const priorityCbs = document.querySelectorAll('.revert-priority-cb:checked');
-  const total = closureCbs.length + priorityCbs.length;
-  footer.classList.toggle('has-selection', total > 0);
-  const parts = [];
-  if (closureCbs.length) parts.push(closureCbs.length + ' closure' + (closureCbs.length !== 1 ? 's' : ''));
-  if (priorityCbs.length) parts.push(priorityCbs.length + ' priority change' + (priorityCbs.length !== 1 ? 's' : ''));
-  footer.querySelector('.revert-count').textContent = parts.join(' + ') + ' selected for revert';
+  const cbs = document.querySelectorAll('.revert-cb:checked');
+  footer.classList.toggle('has-selection', cbs.length > 0);
+  footer.querySelector('.revert-count').textContent = cbs.length + ' ticket' + (cbs.length !== 1 ? 's' : '') + ' selected for revert';
 }
 
 function getRevertTickets() {
@@ -1518,42 +1524,26 @@ function getRevertTickets() {
   }));
 }
 
-function getRevertPriorityTickets() {
-  return [...document.querySelectorAll('.revert-priority-cb:checked')].map(cb => ({
-    key: cb.dataset.key,
-    summary: cb.dataset.summary,
-    original: cb.dataset.original
-  }));
-}
-
 function showRevertModal() {
-  const closureSelected = getRevertTickets();
-  const prioritySelected = getRevertPriorityTickets();
-  if (!closureSelected.length && !prioritySelected.length) return;
+  const selected = getRevertTickets();
+  if (!selected.length) return;
   const overlay = document.getElementById('revert-modal-overlay');
   const modal = overlay.querySelector('.close-modal');
-  let listHtml = '';
-
-  if (closureSelected.length) {
-    listHtml += `<h4 style="color:#f59e0b;margin:8px 0 4px;">Revert Closures (${closureSelected.length})</h4>`;
-    listHtml += `<ul class="close-modal-list">`;
-    closureSelected.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
-    listHtml += `</ul>`;
-    listHtml += `<p style="color:#9ca3af;font-size:12px;">Restores previous status, removes <code>triage-closed-*</code>, adds <code>triage-reverted</code></p>`;
-  }
-
-  if (prioritySelected.length) {
-    listHtml += `<h4 style="color:#60a5fa;margin:8px 0 4px;">Revert Priority Changes (${prioritySelected.length})</h4>`;
-    listHtml += `<ul class="close-modal-list">`;
-    prioritySelected.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary} (restore to: ${s.original})</li>`; });
-    listHtml += `</ul>`;
-    listHtml += `<p style="color:#9ca3af;font-size:12px;">Restores original priority, removes <code>triage-original-priority-*</code>, adds <code>triage-priority-reverted</code></p>`;
-  }
-
+  let listHtml = `<ul class="close-modal-list">`;
+  selected.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
+  listHtml += `</ul>`;
   modal.innerHTML = `
     <h3 style="color:#f59e0b;">Confirm Revert</h3>
+    <p>The following <strong>${selected.length}</strong> ticket(s) will be reverted:</p>
     ${listHtml}
-    <p style="color:#9ca3af;font-size:13px;margin-top:12px;">Click <strong>Copy CLI cmd</strong> to copy the command(s) to your clipboard, then paste into your terminal to execute.</p>
+    <p style="color:#9ca3af;font-size:13px;margin-top:12px;">For each ticket the script will:</p>
+    <ol style="color:#9ca3af;font-size:13px;padding-left:20px;">
+      <li>Look up previous status from changelog</li>
+      <li>Transition ticket back to that status</li>
+      <li>Remove <code>triage-closed-*</code> label</li>
+      <li>Add <code>triage-reverted</code> label</li>
+    </ol>
+    <p style="color:#9ca3af;font-size:13px;">Click <strong>Copy CLI cmd</strong> to copy the command to your clipboard, then paste into your terminal to execute.</p>
     <div class="close-modal-actions">
       <button class="modal-cancel" onclick="document.getElementById('revert-modal-overlay').classList.remove('visible')">Close</button>
       <button class="modal-confirm" onclick="copyRevertCommand()">Copy CLI cmd</button>
@@ -1562,22 +1552,10 @@ function showRevertModal() {
 }
 
 function copyRevertCommand() {
-  const closureSelected = getRevertTickets();
-  const prioritySelected = getRevertPriorityTickets();
-  const cmds = [];
-
-  if (closureSelected.length) {
-    const manifest = { generated_at: new Date().toISOString(), items: closureSelected.map(s => ({ key: s.key })) };
-    cmds.push(`cd ~/repos/work/AI/backlog-triage && python3 scripts/revert_tickets.py --execute --stdin <<'EOF'\n${JSON.stringify(manifest, null, 2)}\nEOF`);
-  }
-
-  if (prioritySelected.length) {
-    const manifest = { generated_at: new Date().toISOString(), items: prioritySelected.map(s => ({ key: s.key })) };
-    cmds.push(`cd ~/repos/work/AI/backlog-triage && python3 scripts/revert_priority.py --execute --stdin <<'EOF'\n${JSON.stringify(manifest, null, 2)}\nEOF`);
-  }
-
-  const fullCmd = cmds.join('\n\n');
-  navigator.clipboard.writeText(fullCmd).then(() => {
+  const selected = getRevertTickets();
+  const manifest = { generated_at: new Date().toISOString(), items: selected.map(s => ({ key: s.key })) };
+  const cmd = `cd ~/repos/work/AI/backlog-triage && python3 scripts/revert_tickets.py --execute --stdin <<'EOF'\n${JSON.stringify(manifest, null, 2)}\nEOF`;
+  navigator.clipboard.writeText(cmd).then(() => {
     const btn = document.querySelector('#revert-modal-overlay .modal-confirm');
     const original = btn.textContent;
     btn.textContent = 'Copied!';
@@ -1642,6 +1620,81 @@ function copyPriorityCommand() {
   const cmd = `cd ~/repos/work/AI/backlog-triage && python3 scripts/set_priority.py --execute --stdin <<'EOF'\n${JSON.stringify(manifest, null, 2)}\nEOF`;
   navigator.clipboard.writeText(cmd).then(() => {
     const btn = document.querySelector('#priority-modal-overlay .modal-confirm');
+    const original = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.style.background = '#22c55e';
+    setTimeout(() => { btn.textContent = original; btn.style.background = ''; }, 2000);
+  });
+}
+
+// --- Priority revert mode (triple-click on Accepted box) ---
+let acceptedClickCount = 0;
+let acceptedClickTimer = null;
+document.addEventListener('click', (e) => {
+  const box = e.target.closest('#accepted-priority-box');
+  if (!box) { acceptedClickCount = 0; return; }
+  acceptedClickCount++;
+  clearTimeout(acceptedClickTimer);
+  acceptedClickTimer = setTimeout(() => { acceptedClickCount = 0; }, 1200);
+  if (acceptedClickCount >= 3) {
+    acceptedClickCount = 0;
+    const isActive = document.body.classList.toggle('priority-revert-mode');
+    const table = document.getElementById('priorities-table');
+    if (table) {
+      table.querySelectorAll('tbody tr').forEach(row => {
+        if (isActive) {
+          row.style.display = row.dataset.accepted === 'yes' ? '' : 'none';
+        } else {
+          row.style.display = '';
+        }
+      });
+    }
+    updatePriorityRevertFooter();
+  }
+});
+
+function updatePriorityRevertFooter() {
+  const footer = document.getElementById('priority-revert-footer');
+  if (!footer) return;
+  const cbs = document.querySelectorAll('.priority-revert-cb:checked');
+  footer.classList.toggle('has-selection', cbs.length > 0);
+  footer.querySelector('.priority-revert-count').textContent = cbs.length + ' ticket' + (cbs.length !== 1 ? 's' : '') + ' selected for priority revert';
+}
+
+function showPriorityRevertModal() {
+  const selected = [...document.querySelectorAll('.priority-revert-cb:checked')].map(cb => ({
+    key: cb.dataset.key, summary: cb.dataset.summary, original: cb.dataset.original
+  }));
+  if (!selected.length) return;
+  const overlay = document.getElementById('priority-revert-modal-overlay');
+  const modal = overlay.querySelector('.close-modal');
+  let listHtml = `<ul class="close-modal-list">`;
+  selected.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary} (restore to: ${s.original})</li>`; });
+  listHtml += `</ul>`;
+  modal.innerHTML = `
+    <h3 style="color:#f59e0b;">Confirm Priority Revert</h3>
+    <p>The following <strong>${selected.length}</strong> ticket(s) will have their priority reverted:</p>
+    ${listHtml}
+    <p style="color:#9ca3af;font-size:13px;margin-top:12px;">For each ticket the script will:</p>
+    <ol style="color:#9ca3af;font-size:13px;padding-left:20px;">
+      <li>Restore original priority from <code>triage-original-priority-*</code> label</li>
+      <li>Remove the <code>triage-original-priority-*</code> label</li>
+      <li>Add <code>triage-priority-reverted</code> label</li>
+    </ol>
+    <p style="color:#9ca3af;font-size:13px;">Click <strong>Copy CLI cmd</strong> to copy the command to your clipboard, then paste into your terminal to execute.</p>
+    <div class="close-modal-actions">
+      <button class="modal-cancel" onclick="document.getElementById('priority-revert-modal-overlay').classList.remove('visible')">Close</button>
+      <button class="modal-confirm" onclick="copyPriorityRevertCommand()">Copy CLI cmd</button>
+    </div>`;
+  overlay.classList.add('visible');
+}
+
+function copyPriorityRevertCommand() {
+  const selected = [...document.querySelectorAll('.priority-revert-cb:checked')].map(cb => ({ key: cb.dataset.key }));
+  const manifest = { generated_at: new Date().toISOString(), items: selected };
+  const cmd = `cd ~/repos/work/AI/backlog-triage && python3 scripts/revert_priority.py --execute --stdin <<'EOF'\n${JSON.stringify(manifest, null, 2)}\nEOF`;
+  navigator.clipboard.writeText(cmd).then(() => {
+    const btn = document.querySelector('#priority-revert-modal-overlay .modal-confirm');
     const original = btn.textContent;
     btn.textContent = 'Copied!';
     btn.style.background = '#22c55e';
