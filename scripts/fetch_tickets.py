@@ -43,7 +43,7 @@ JQL_FROZEN = (
 
 FIELDS = [
     "key", "summary", "description", "labels", "components",
-    "reporter", "priority", "created", "updated", "comment",
+    "reporter", "assignee", "priority", "created", "updated", "comment",
     "watches", "issuelinks", "issuetype", "status", "parent",
     "customfield_10020",  # Sprint
 ]
@@ -121,6 +121,7 @@ def normalize_issue(issue):
     """Flatten a Jira issue into a clean dict for local processing."""
     fields = issue.get("fields", {})
     reporter = fields.get("reporter") or {}
+    assignee = fields.get("assignee") or {}
     comments = fields.get("comment", {}).get("comments", [])
     watches = fields.get("watches", {})
     parent = fields.get("parent") or {}
@@ -172,6 +173,7 @@ def normalize_issue(issue):
         "components": [c.get("name", "") for c in fields.get("components", [])],
         "reporter_email": reporter.get("emailAddress", ""),
         "reporter_name": reporter.get("displayName", ""),
+        "assignee": assignee.get("displayName", ""),
         "created": fields.get("created", ""),
         "updated": fields.get("updated", ""),
         "comment_count": len(comments),
@@ -187,7 +189,7 @@ def normalize_issue(issue):
 
 
 def fetch_parent_resolution_dates(parent_keys):
-    """Fetch resolutiondate for a list of parent issue keys."""
+    """Fetch resolutiondate, assignee, and priority for closed parent issue keys."""
     if not parent_keys:
         return {}
     auth = get_auth()
@@ -201,7 +203,7 @@ def fetch_parent_resolution_dates(parent_keys):
         params = {
             "jql": jql,
             "maxResults": 50,
-            "fields": "key,resolutiondate",
+            "fields": "key,resolutiondate,assignee,priority",
         }
         if next_page_token:
             params["nextPageToken"] = next_page_token
@@ -210,8 +212,15 @@ def fetch_parent_resolution_dates(parent_keys):
         data = resp.json()
         for issue in data.get("issues", []):
             key = issue.get("key", "")
-            rd = issue.get("fields", {}).get("resolutiondate", "")
-            results[key] = rd[:10] if rd else ""
+            f = issue.get("fields", {})
+            rd = f.get("resolutiondate", "")
+            assignee = (f.get("assignee") or {}).get("displayName", "")
+            priority = (f.get("priority") or {}).get("name", "")
+            results[key] = {
+                "resolutiondate": rd[:10] if rd else "",
+                "assignee": assignee,
+                "priority": priority,
+            }
         if data.get("isLast", True):
             break
         next_page_token = data.get("nextPageToken")
@@ -251,10 +260,13 @@ def main():
         parent_dates = fetch_parent_resolution_dates(closed_parent_keys)
         print(f"  Got dates for {sum(1 for v in parent_dates.values() if v)} parents")
 
-    # Inject parent_resolutiondate into tickets
+    # Inject parent metadata into tickets
     for t in all_tickets:
         pk = t.get("parent_key", "")
-        t["parent_resolutiondate"] = parent_dates.get(pk, "")
+        pdata = parent_dates.get(pk, {})
+        t["parent_resolutiondate"] = pdata.get("resolutiondate", "") if pdata else ""
+        t["parent_assignee"] = pdata.get("assignee", "") if pdata else ""
+        t["parent_priority"] = pdata.get("priority", "") if pdata else ""
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_FILE, "w") as f:

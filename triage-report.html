@@ -688,10 +688,12 @@ function renderCleanupTab() {
   const byParent = {};
   closedParent.forEach(t => {
     const pk = t.parent_key || '(none)';
-    if (!byParent[pk]) byParent[pk] = { status: t.parent_status, summary: t.parent_summary || '', type: t.parent_type || '', children: [] };
+    if (!byParent[pk]) byParent[pk] = { status: t.parent_status, summary: t.parent_summary || '', type: t.parent_type || '', assignee: t.parent_assignee || '', priority: t.parent_priority || '', children: [] };
     byParent[pk].children.push(t);
     if (!byParent[pk].summary && t.parent_summary) byParent[pk].summary = t.parent_summary;
     if (!byParent[pk].type && t.parent_type) byParent[pk].type = t.parent_type;
+    if (!byParent[pk].assignee && t.parent_assignee) byParent[pk].assignee = t.parent_assignee;
+    if (!byParent[pk].priority && t.parent_priority) byParent[pk].priority = t.parent_priority;
   });
 
   // Sort children within each parent by Jira ID
@@ -725,7 +727,7 @@ function renderCleanupTab() {
 
   html += `<table id="cleanup-table"><thead><tr>`;
   html += `<th class="close-col" style="width:30px;"></th>`;
-  ['Parent','Type','Summary','# Open Children','Closed'].forEach(h => {
+  ['Parent','Type','Summary','Assignee','Priority','Status','# Open Children','Closed'].forEach(h => {
     html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
   });
   html += `</tr></thead><tbody>`;
@@ -734,7 +736,7 @@ function renderCleanupTab() {
     const group = byParent[pk];
     const parentSummary = group.summary ? esc(group.summary) : '';
     const childRows = group.children.map(t =>
-      `<tr><td class="close-col"><input type="checkbox" class="close-cb" data-key="${esc(t.key)}" onchange="syncOrphanParent(this)"></td><td class="nowrap">${jiraLink(t.key)}</td><td>${esc(t.summary)}</td><td>${esc(t.type)}</td><td>${esc(t.status)}</td></tr>`
+      `<tr><td class="close-col"><input type="checkbox" class="close-cb" data-key="${esc(t.key)}" onchange="syncOrphanParent(this)"></td><td class="nowrap">${jiraLink(t.key)}</td><td>${esc(t.summary)}</td><td>${esc(t.assignee || '')}</td><td>${esc(t.type)}</td><td>${esc(t.status)}</td></tr>`
     ).join('');
 
     html += `<tr class="orphan-parent-row" onclick="this.classList.toggle('expanded');this.nextElementSibling.classList.toggle('visible');">`;
@@ -742,10 +744,13 @@ function renderCleanupTab() {
     html += `<td class="nowrap"><span class="orphan-toggle">&#9654;</span> ${jiraLink(pk)}</td>`;
     html += `<td>${esc(group.type)}</td>`;
     html += `<td>${parentSummary}</td>`;
+    html += `<td>${esc(group.assignee)}</td>`;
+    html += `<td>${esc(group.priority)}</td>`;
+    html += `<td style="color:#ef4444;">${esc(group.status)}</td>`;
     html += `<td style="color:#ef4444;font-weight:600;">${group.children.length}</td>`;
     html += `<td class="nowrap">${group.closedDate}</td>`;
     html += `</tr>`;
-    html += `<tr class="orphan-detail-row"><td colspan="6"><table class="orphan-child-table"><thead><tr><th class="close-col" style="width:30px;"></th><th>Key</th><th>Summary</th><th>Type</th><th>Status</th></tr></thead><tbody>${childRows}</tbody></table></td></tr>`;
+    html += `<tr class="orphan-detail-row"><td colspan="9"><table class="orphan-child-table"><thead><tr><th class="close-col" style="width:30px;"></th><th>Key</th><th>Summary</th><th>Assignee</th><th>Type</th><th>Status</th></tr></thead><tbody>${childRows}</tbody></table></td></tr>`;
   });
 
   html += `</tbody></table></div>`;
@@ -767,7 +772,7 @@ function renderLifecycleTab() {
   // Stale sub-tab
   const staleNonGenerated = stale.filter(t => !isGeneratedTicket(t.summary, t.reporter_email, t.reporter_name));
   html += `<div class="subtab-content active" id="subtab-lifecycle-stale">`;
-  html += `<div style="margin:8px 0 12px;color:#9ca3af;">Tickets labeled <code>lifecycle-stale</code> — auto-close process will close these (>60d warning, >90d close). Review if any should be rescued with <code>lifecycle-frozen</code>.</div>`;
+  html += `<div style="margin:8px 0 12px;color:#9ca3af;">Tickets labeled <code>lifecycle-stale</code> — already inactive for 180 days (~6 months). The lifecycle bot will auto-close them after 90 more days (~3 months) of inactivity (270 days / ~9 months total). Review if any should be rescued with <code>lifecycle-frozen</code>.</div>`;
   html += `<div class="filter-bar">`;
   html += `<input type="text" id="stale-filter" placeholder="Filter by key or summary..." oninput="filterTable('stale-table','stale-filter')">`;
   html += `<label style="display:inline-flex;align-items:center;gap:6px;margin-left:16px;color:#9ca3af;font-size:0.85em;cursor:pointer;white-space:nowrap;"><input type="checkbox" id="stale-show-generated" style="margin:0;vertical-align:middle;" onchange="toggleGeneratedRows('stale-table', this.checked)"> Show Generated Items (${stale.length - staleNonGenerated.length})</label>`;
@@ -816,7 +821,7 @@ function renderLifecycleTable(tableId, tickets, {showEstClose = true, hideGenera
   if (showUnfreeze) html += `<th class="unfreeze-col" style="font-size:12px;">Unfreeze?</th>`;
   const lcHeaders = [
     {name: 'Type'}, {name: 'Key'}, {name: 'Summary'}, {name: 'Status'},
-    {name: 'Priority'}, {name: 'Reporter'}, {name: 'Last Updated'}, {name: 'Created'},
+    {name: 'Priority'}, {name: 'Reporter'}, {name: 'Created'}, {name: 'Last Updated'},
   ];
   if (showEstClose) lcHeaders.push({name: 'Est. Close', info: 'est-close-info'});
   lcHeaders.push({name: 'Parent'});
@@ -842,8 +847,8 @@ function renderLifecycleTable(tableId, tickets, {showEstClose = true, hideGenera
     html += `<td>${esc(t.status)}</td>`;
     html += `<td>${esc(t.priority)}</td>`;
     html += `<td>${esc((t.reporter_email || '').split('@')[0] || t.reporter_name || '')}</td>`;
-    html += `<td class="nowrap">${(t.updated || '').slice(0, 10)}</td>`;
     html += `<td class="nowrap">${(t.created || '').slice(0, 10)}</td>`;
+    html += `<td class="nowrap">${(t.updated || '').slice(0, 10)}</td>`;
     if (showEstClose) html += `<td class="nowrap">${closeDateDisplay(t.updated)}</td>`;
     html += `<td class="nowrap">${t.parent_key ? jiraLink(t.parent_key) : ''}</td>`;
     html += `</tr>`;
@@ -1202,13 +1207,14 @@ const INFO_CONTENT = {
 
   'est-close-info': `<h4>Estimated Close Date</h4>
 <p>Approximation of when the lifecycle bot will auto-close this ticket.</p>
-<p><strong>Lifecycle bot process:</strong></p>
+<p><strong>Lifecycle bot process (270 days / ~9 months total):</strong></p>
 <ol style="margin:6px 0 0 16px;">
-<li>After <strong>180 days</strong> of inactivity → adds <code>lifecycle-stale</code> label</li>
-<li>After an additional <strong>90 days</strong> of inactivity → auto-closes the ticket</li>
+<li>After <strong>180 days (~6 months)</strong> of inactivity → bot adds <code>lifecycle-stale</code> label (this action updates the ticket's "Last Updated" timestamp)</li>
+<li>After an additional <strong>90 days (~3 months)</strong> of inactivity → bot auto-closes the ticket</li>
 </ol>
-<p><strong>Calculation:</strong> Last Updated + 90 days</p>
-<p>Since the label is typically applied around the last update timestamp, we estimate closure as Last Updated + 90d.</p>
+<p style="margin-top:12px;"><strong>Calculation:</strong> Last Updated + 90 days (~3 months)</p>
+<p>Since these tickets already have the <code>lifecycle-stale</code> label, they've already been inactive for 180 days (~6 months). Adding the label reset "Last Updated", so the remaining 90-day (~3-month) countdown starts from that timestamp.</p>
+<p>To rescue a ticket: remove the <code>lifecycle-stale</code> label or add <code>lifecycle-frozen</code>. Any activity resets the timer.</p>
 <p><strong>Color coding:</strong></p>
 <ul style="margin:6px 0 0 16px;">
 <li><span style="color:#ef4444;font-weight:600;">Red</span> — 7 days or fewer remaining (or overdue)</li>
@@ -1247,7 +1253,7 @@ const INFO_CONTENT = {
 <h5>What Each Tab Does</h5>
 <ul style="margin:6px 0 0 16px;">
 <li><strong>Priority Scoring</strong> \u2014 Every ticket gets a computed score (0\u2013100) based on reporter source, comment activity, age, watchers, linked epics, and more. Compares computed vs. current Jira priority, and auto-escalates tickets with clear urgency signals (customer cases, SLA dates, external blockers).</li>
-<li><strong>Lifecycle</strong> \u2014 Tracks tickets marked <code>lifecycle-stale</code> that will be auto-closed by the Jira lifecycle bot within ~90 days. Shows estimated close dates so you can rescue tickets that still matter.</li>
+<li><strong>Lifecycle</strong> \u2014 Tracks tickets marked <code>lifecycle-stale</code> (inactive for 180 days / ~6 months). The lifecycle bot will auto-close them after 90 more days (~3 months) of inactivity — 270 days (~9 months) total. Shows estimated close dates so you can rescue tickets that still matter.</li>
 <li><strong>Obsolete Candidates</strong> \u2014 Cross-references each ticket\u2019s description against the current codebase (<code>git ls-files</code> + ripgrep). Tickets referencing deleted routes, removed components, or refactored files score high.</li>
 <li><strong>Possible Duplicates</strong> \u2014 Detects cases where Jira automation ran multiple times on the same epic, creating duplicate generated child tasks.</li>
 <li><strong>Orphaned Issues</strong> \u2014 Open children whose parent epic is already Closed. These will never be worked on and should be closed or re-parented.</li>
