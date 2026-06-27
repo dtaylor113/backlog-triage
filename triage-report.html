@@ -136,6 +136,11 @@ th .resize-handle:hover, th .resize-handle.active { background: #60a5fa; }
 .info-popup h4 { color: #93c5fd; margin-bottom: 8px; font-size: 13px; }
 .info-popup h5 { color: #60a5fa; margin: 14px 0 6px; font-size: 12px; border-bottom: 1px solid #374151; padding-bottom: 4px; }
 .info-popup table { margin: 8px 0; font-size: 11px; }
+.jira-label {
+  display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 500;
+  background: #e8e8e8; color: #333; font-family: -apple-system, sans-serif; vertical-align: middle;
+  margin: 0 2px; white-space: nowrap;
+}
 .info-btn-lg {
   display: inline-flex; align-items: center; justify-content: center;
   width: 22px; height: 22px; border-radius: 50%; font-size: 13px; font-weight: 700;
@@ -1271,22 +1276,22 @@ const INFO_CONTENT = {
 <ul style="margin:6px 0 0 28px;">
 <li><strong>Freeze mode</strong> \u2014 Activate by triple-clicking the \u201cStale\u201d sub-tab. Reveals \u201cFreeze?\u201d checkboxes on stale tickets.</li>
 <li><strong>Unfreeze mode</strong> \u2014 Activate by triple-clicking the \u201cFrozen\u201d sub-tab. Reveals \u201cUnfreeze?\u201d checkboxes.</li>
-<li><strong>Labels</strong> \u2014 Freezing adds <code>lifecycle-frozen</code> + <code>triage-frozen</code>. Unfreezing removes both, restoring the stale countdown.</li>
+<li><strong>Labels</strong> \u2014 Freezing adds <span class="jira-label">lifecycle-frozen</span> <span class="jira-label">triage-frozen</span>. Unfreezing removes both and adds <span class="jira-label">lifecycle-stale</span>.</li>
 </ul>
 
 <h5 style="margin-left:12px;">Setting Priority to Suggested</h5>
 <ul style="margin:6px 0 0 28px;">
 <li><strong>Priority mode</strong> \u2014 Activate by triple-clicking the \u201cPriority Scoring\u201d tab. Reveals \u201cSet Priority to Suggested?\u201d checkboxes where current differs from suggested.</li>
-<li><strong>Labels for reversibility</strong> \u2014 Adds <code>triage-original-priority-{name}</code> so the original value is preserved.</li>
+<li><strong>Labels for reversibility</strong> \u2014 Adds <span class="jira-label">triage-original-priority-{name}</span> so the original value is preserved.</li>
 <li><strong>Revert priority</strong> \u2014 Triple-click the \u201cSuggested Priorities Accepted\u201d box to filter to accepted tickets and reveal \u201cRevert Suggested Priority?\u201d checkboxes.</li>
 </ul>
 
 <h5 style="margin-left:12px;">Closing & Reverting Tickets</h5>
 <ul style="margin:6px 0 0 28px;">
 <li><strong>Close mode</strong> \u2014 Activate by triple-clicking any primary tab (except Priority Scoring, Lifecycle, or Close History). Reveals checkboxes in Obsolete, Duplicates, and Orphaned tabs.</li>
-<li><strong>Closures apply</strong> a Jira label (<code>triage-closed-orphan</code>, <code>triage-closed-duplicate</code>, or <code>triage-closed-obsolete</code>) and set the appropriate resolution. Nothing disappears silently.</li>
+<li><strong>Closures apply</strong> a Jira label (<span class="jira-label">triage-closed-orphan</span> <span class="jira-label">triage-closed-duplicate</span> or <span class="jira-label">triage-closed-obsolete</span>) and set the appropriate resolution. Nothing disappears silently.</li>
 <li><strong>Revert mode</strong> \u2014 Activate by triple-clicking the \u201cClose History\u201d tab. Reveals checkboxes in the Closure Log to revert closures.</li>
-<li><strong>Revert restores</strong> the ticket\u2019s previous status, removes the <code>triage-closed-*</code> label, and adds <code>triage-reverted</code>.</li>
+<li><strong>Revert restores</strong> the ticket\u2019s previous status, removes <span class="jira-label">triage-closed-*</span> label, and adds <span class="jira-label">triage-reverted</span>.</li>
 </ul>`,
 };
 
@@ -1466,21 +1471,21 @@ function showCloseModal() {
   let listHtml = '';
   if (byCategory.orphan.length) {
     listHtml += `<h4 style="color:#f59e0b;margin:8px 0 4px;">Orphaned → Resolution: Won't Do</h4>`;
-    listHtml += `<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Label: <code>triage-closed-orphan</code> · Comment: "Closed via backlog triage — reason: Parent [key] closed"</div>`;
+    listHtml += `<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Adds <span class="jira-label">triage-closed-orphan</span> · Comment: "Closed via backlog triage — reason: Parent [key] closed"</div>`;
     listHtml += `<ul class="close-modal-list">`;
     byCategory.orphan.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
     listHtml += `</ul>`;
   }
   if (byCategory.duplicate.length) {
     listHtml += `<h4 style="color:#a78bfa;margin:8px 0 4px;">Duplicate → Resolution: Duplicate</h4>`;
-    listHtml += `<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Label: <code>triage-closed-duplicate</code> · Comment: "Closed via backlog triage — reason: Duplicate under [parent]"</div>`;
+    listHtml += `<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Adds <span class="jira-label">triage-closed-duplicate</span> · Comment: "Closed via backlog triage — reason: Duplicate under [parent]"</div>`;
     listHtml += `<ul class="close-modal-list">`;
     byCategory.duplicate.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
     listHtml += `</ul>`;
   }
   if (byCategory.obsolete.length) {
     listHtml += `<h4 style="color:#9ca3af;margin:8px 0 4px;">Obsolete → Resolution: Obsolete</h4>`;
-    listHtml += `<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Label: <code>triage-closed-obsolete</code> · Comment: "Closed via backlog triage — reason: Obsolete candidate (stale references)"</div>`;
+    listHtml += `<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Adds <span class="jira-label">triage-closed-obsolete</span> · Comment: "Closed via backlog triage — reason: Obsolete candidate (stale references)"</div>`;
     listHtml += `<ul class="close-modal-list">`;
     byCategory.obsolete.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
     listHtml += `</ul>`;
@@ -1552,8 +1557,8 @@ function showRevertModal() {
     <ol style="color:#9ca3af;font-size:13px;padding-left:20px;">
       <li>Look up previous status from changelog</li>
       <li>Transition ticket back to that status</li>
-      <li>Remove <code>triage-closed-*</code> label</li>
-      <li>Add <code>triage-reverted</code> label</li>
+      <li>Remove <span class="jira-label">triage-closed-*</span> label</li>
+      <li>Add <span class="jira-label">triage-reverted</span> label</li>
     </ol>
     <p style="color:#9ca3af;font-size:13px;">Click <strong>Copy CLI cmd</strong> to copy the command to your clipboard, then paste into your terminal to execute.</p>
     <div class="close-modal-actions">
@@ -1612,8 +1617,8 @@ function showPriorityModal() {
     <p style="color:#9ca3af;font-size:13px;margin-top:12px;">For each ticket the script will:</p>
     <ol style="color:#9ca3af;font-size:13px;padding-left:20px;">
       <li>Set Jira priority to the suggested value</li>
-      <li>Add <code>triage-original-priority-{current}</code> label for reversibility</li>
-      <li>Remove any prior <code>triage-priority-reverted</code> label</li>
+      <li>Add <span class="jira-label">triage-original-priority-{current}</span> label for reversibility</li>
+      <li>Remove any prior <span class="jira-label">triage-priority-reverted</span> label</li>
     </ol>
     <p style="color:#9ca3af;font-size:13px;">Click <strong>Copy CLI cmd</strong> to copy the command to your clipboard, then paste into your terminal to execute.</p>
     <div class="close-modal-actions">
@@ -1689,9 +1694,9 @@ function showPriorityRevertModal() {
     ${listHtml}
     <p style="color:#9ca3af;font-size:13px;margin-top:12px;">For each ticket the script will:</p>
     <ol style="color:#9ca3af;font-size:13px;padding-left:20px;">
-      <li>Restore original priority from <code>triage-original-priority-*</code> label</li>
-      <li>Remove the <code>triage-original-priority-*</code> label</li>
-      <li>Add <code>triage-priority-reverted</code> label</li>
+      <li>Restore original priority from <span class="jira-label">triage-original-priority-*</span> label</li>
+      <li>Remove <span class="jira-label">triage-original-priority-*</span> label</li>
+      <li>Add <span class="jira-label">triage-priority-reverted</span> label</li>
     </ol>
     <p style="color:#9ca3af;font-size:13px;">Click <strong>Copy CLI cmd</strong> to copy the command to your clipboard, then paste into your terminal to execute.</p>
     <div class="close-modal-actions">
@@ -1756,7 +1761,7 @@ function showFreezeModal() {
 
   if (freezeSelected.length) {
     listHtml += `<h4 style="color:#22d3ee;margin:8px 0 4px;">Freeze (${freezeSelected.length})</h4>`;
-    listHtml += `<p style="color:#9ca3af;font-size:12px;">Adds <code>lifecycle-frozen</code> + <code>triage-frozen</code> labels. Prevents lifecycle bot from auto-closing.</p>`;
+    listHtml += `<p style="color:#9ca3af;font-size:12px;">Adds <span class="jira-label">lifecycle-frozen</span> <span class="jira-label">triage-frozen</span></p>`;
     listHtml += `<ul class="close-modal-list">`;
     freezeSelected.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
     listHtml += `</ul>`;
@@ -1764,7 +1769,7 @@ function showFreezeModal() {
 
   if (unfreezeSelected.length) {
     listHtml += `<h4 style="color:#f59e0b;margin:8px 0 4px;">Unfreeze (${unfreezeSelected.length})</h4>`;
-    listHtml += `<p style="color:#9ca3af;font-size:12px;">Removes <code>lifecycle-frozen</code> + <code>triage-frozen</code> labels. Restores ticket to stale lifecycle countdown.</p>`;
+    listHtml += `<p style="color:#9ca3af;font-size:12px;">Removes <span class="jira-label">lifecycle-frozen</span> <span class="jira-label">triage-frozen</span> · Adds <span class="jira-label">lifecycle-stale</span></p>`;
     listHtml += `<ul class="close-modal-list">`;
     unfreezeSelected.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
     listHtml += `</ul>`;
