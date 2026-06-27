@@ -225,16 +225,20 @@ body.priority-revert-mode .priority-revert-footer.has-selection { display: flex;
 }
 .priority-revert-footer .priority-revert-btn-action:hover { background: #d97706; }
 
-/* Freeze mode (hidden until triple-click on Lifecycle tab) */
+/* Freeze/Unfreeze mode (hidden until triple-click on Stale/Frozen sub-tabs) */
 .freeze-col { display: none; }
+.unfreeze-col { display: none; }
 body.freeze-mode .freeze-col { display: table-cell; }
+body.unfreeze-mode .unfreeze-col { display: table-cell; }
 .freeze-col input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: #22d3ee; }
+.unfreeze-col input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: #f59e0b; }
 .freeze-footer {
   display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
   background: #1f2937; border-top: 2px solid #22d3ee; padding: 10px 24px;
   align-items: center; justify-content: space-between; gap: 16px;
 }
 body.freeze-mode .freeze-footer.has-selection { display: flex; }
+body.unfreeze-mode .freeze-footer.has-selection { display: flex; }
 .freeze-footer .freeze-count { color: #e5e7eb; font-weight: 600; }
 .freeze-footer .freeze-btn-action {
   background: #22d3ee; color: #000; border: none; border-radius: 6px;
@@ -794,7 +798,7 @@ function closeDateDisplay(updatedStr) {
 function renderLifecycleTable(tableId, tickets, {showEstClose = true, hideGenerated = false, showFreeze = false, showUnfreeze = false} = {}) {
   let html = `<table id="${tableId}"><thead><tr>`;
   if (showFreeze) html += `<th class="freeze-col" style="font-size:12px;">Freeze?</th>`;
-  if (showUnfreeze) html += `<th class="freeze-col" style="font-size:12px;">Unfreeze?</th>`;
+  if (showUnfreeze) html += `<th class="unfreeze-col" style="font-size:12px;">Unfreeze?</th>`;
   const lcHeaders = [
     {name: 'Type'}, {name: 'Key'}, {name: 'Summary'}, {name: 'Status'},
     {name: 'Priority'}, {name: 'Reporter'}, {name: 'Last Updated'}, {name: 'Created'},
@@ -815,12 +819,7 @@ function renderLifecycleTable(tableId, tickets, {showEstClose = true, hideGenera
       html += `<td class="freeze-col"><input type="checkbox" class="freeze-cb" data-key="${esc(t.key)}" data-summary="${esc(t.summary)}" onchange="updateFreezeFooter()"></td>`;
     }
     if (showUnfreeze) {
-      const hasTriageFrozen = (t.labels || []).includes('triage-frozen');
-      if (hasTriageFrozen) {
-        html += `<td class="freeze-col"><input type="checkbox" class="unfreeze-cb" data-key="${esc(t.key)}" data-summary="${esc(t.summary)}" onchange="updateFreezeFooter()"></td>`;
-      } else {
-        html += `<td class="freeze-col"></td>`;
-      }
+      html += `<td class="unfreeze-col"><input type="checkbox" class="unfreeze-cb" data-key="${esc(t.key)}" data-summary="${esc(t.summary)}" onchange="updateFreezeFooter()"></td>`;
     }
     html += `<td>${esc(t.type)}</td>`;
     html += `<td class="nowrap">${jiraLink(t.key)}</td>`;
@@ -1362,9 +1361,9 @@ let tabClickCount = 0;
 let tabClickTimer = null;
 let lastClickedTab = null;
 document.addEventListener('click', (e) => {
-  const tab = e.target.closest('.tab[data-tab]');
+  const tab = e.target.closest('.tab[data-tab]') || e.target.closest('.tab[data-subtab]');
   if (!tab) { tabClickCount = 0; lastClickedTab = null; return; }
-  const tabId = tab.getAttribute('data-tab');
+  const tabId = tab.getAttribute('data-tab') || tab.getAttribute('data-subtab');
   if (tabId !== lastClickedTab) { tabClickCount = 0; lastClickedTab = tabId; }
   tabClickCount++;
   clearTimeout(tabClickTimer);
@@ -1377,8 +1376,11 @@ document.addEventListener('click', (e) => {
     } else if (tabId === 'priorities') {
       document.body.classList.toggle('priority-mode');
       updatePriorityFooter();
-    } else if (tabId === 'lifecycle') {
+    } else if (tabId === 'lifecycle-stale') {
       document.body.classList.toggle('freeze-mode');
+      updateFreezeFooter();
+    } else if (tabId === 'lifecycle-frozen') {
+      document.body.classList.toggle('unfreeze-mode');
       updateFreezeFooter();
     } else {
       document.body.classList.toggle('close-mode');
