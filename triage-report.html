@@ -208,6 +208,23 @@ body.priority-mode .priority-footer.has-selection { display: flex; }
 }
 .priority-footer .priority-btn-action:hover { background: #3b82f6; }
 
+/* Freeze mode (hidden until triple-click on Lifecycle tab) */
+.freeze-col { display: none; }
+body.freeze-mode .freeze-col { display: table-cell; }
+.freeze-col input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: #22d3ee; }
+.freeze-footer {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
+  background: #1f2937; border-top: 2px solid #22d3ee; padding: 10px 24px;
+  align-items: center; justify-content: space-between; gap: 16px;
+}
+body.freeze-mode .freeze-footer.has-selection { display: flex; }
+.freeze-footer .freeze-count { color: #e5e7eb; font-weight: 600; }
+.freeze-footer .freeze-btn-action {
+  background: #22d3ee; color: #000; border: none; border-radius: 6px;
+  padding: 8px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.freeze-footer .freeze-btn-action:hover { background: #06b6d4; }
+
 /* Revert mode */
 .revert-col { display: none; }
 body.revert-mode .revert-col { display: table-cell; }
@@ -247,6 +264,13 @@ body.revert-mode .revert-footer.has-selection { display: flex; }
   <button class="priority-btn-action" onclick="showPriorityModal()">Set Priority</button>
 </div>
 <div class="close-modal-overlay" id="priority-modal-overlay">
+  <div class="close-modal"></div>
+</div>
+<div class="freeze-footer" id="freeze-footer">
+  <span class="freeze-count">0 tickets selected</span>
+  <button class="freeze-btn-action" id="freeze-btn" onclick="showFreezeModal()">Freeze Selected</button>
+</div>
+<div class="close-modal-overlay" id="freeze-modal-overlay">
   <div class="close-modal"></div>
 </div>
 <script src="triage-data.js"></script>
@@ -679,7 +703,7 @@ function renderLifecycleTab() {
   html += `<input type="text" id="stale-filter" placeholder="Filter by key or summary..." oninput="filterTable('stale-table','stale-filter')">`;
   html += `<label style="display:inline-flex;align-items:center;gap:6px;margin-left:16px;color:#9ca3af;font-size:0.85em;cursor:pointer;white-space:nowrap;"><input type="checkbox" id="stale-show-generated" style="margin:0;vertical-align:middle;" onchange="toggleGeneratedRows('stale-table', this.checked)"> Show Generated Items (${stale.length - staleNonGenerated.length})</label>`;
   html += `</div>`;
-  html += renderLifecycleTable('stale-table', stale, {showEstClose: true, hideGenerated: true});
+  html += renderLifecycleTable('stale-table', stale, {showEstClose: true, hideGenerated: true, showFreeze: true});
   html += `</div>`;
 
   // Frozen sub-tab
@@ -688,7 +712,7 @@ function renderLifecycleTab() {
   html += `<div class="filter-bar">`;
   html += `<input type="text" id="frozen-filter" placeholder="Filter by key or summary..." oninput="filterTable('frozen-table','frozen-filter')">`;
   html += `</div>`;
-  html += renderLifecycleTable('frozen-table', frozen, {showEstClose: false});
+  html += renderLifecycleTable('frozen-table', frozen, {showEstClose: false, showUnfreeze: true});
   html += `</div>`;
 
   html += `</div>`;
@@ -717,8 +741,10 @@ function closeDateDisplay(updatedStr) {
   return `<span style="color:${color};font-weight:600;">${dateStr}</span> <span style="color:${color};font-size:0.8em;">(${label})</span>`;
 }
 
-function renderLifecycleTable(tableId, tickets, {showEstClose = true, hideGenerated = false} = {}) {
+function renderLifecycleTable(tableId, tickets, {showEstClose = true, hideGenerated = false, showFreeze = false, showUnfreeze = false} = {}) {
   let html = `<table id="${tableId}"><thead><tr>`;
+  if (showFreeze) html += `<th class="freeze-col" style="font-size:12px;">Freeze?</th>`;
+  if (showUnfreeze) html += `<th class="freeze-col" style="font-size:12px;">Unfreeze?</th>`;
   const lcHeaders = [
     {name: 'Type'}, {name: 'Key'}, {name: 'Summary'}, {name: 'Status'},
     {name: 'Priority'}, {name: 'Reporter'}, {name: 'Last Updated'}, {name: 'Created'},
@@ -735,6 +761,17 @@ function renderLifecycleTable(tableId, tickets, {showEstClose = true, hideGenera
     const generated = isGeneratedTicket(t.summary, t.reporter_email, t.reporter_name);
     const hidden = hideGenerated && generated;
     html += `<tr data-generated="${generated ? 'yes' : 'no'}" ${hidden ? 'style="display:none;"' : ''}>`;
+    if (showFreeze) {
+      html += `<td class="freeze-col"><input type="checkbox" class="freeze-cb" data-key="${esc(t.key)}" data-summary="${esc(t.summary)}" onchange="updateFreezeFooter()"></td>`;
+    }
+    if (showUnfreeze) {
+      const hasTriageFrozen = (t.labels || []).includes('triage-frozen');
+      if (hasTriageFrozen) {
+        html += `<td class="freeze-col"><input type="checkbox" class="unfreeze-cb" data-key="${esc(t.key)}" data-summary="${esc(t.summary)}" onchange="updateFreezeFooter()"></td>`;
+      } else {
+        html += `<td class="freeze-col"></td>`;
+      }
+    }
     html += `<td>${esc(t.type)}</td>`;
     html += `<td class="nowrap">${jiraLink(t.key)}</td>`;
     html += `<td>${esc(t.summary)}</td>`;
@@ -1203,6 +1240,13 @@ const INFO_CONTENT = {
 <li><strong>Private distribution only</strong> \u2014 The standalone HTML file is shared exclusively via a private Slack channel visible only to the OCMUI team. It is not hosted on any public URL.</li>
 </ul>
 
+<h5>Freezing Lifecycle Tickets</h5>
+<p>Activate freeze mode in the Lifecycle tab to bulk-freeze stale tickets, preventing the lifecycle bot from auto-closing them.</p>
+<ul style="margin:6px 0 0 16px;">
+<li><strong>Freeze mode</strong> \u2014 Activate freeze mode to reveal \u201cFreeze?\u201d checkboxes on stale tickets and \u201cUnfreeze?\u201d checkboxes on frozen tickets that were frozen by triage.</li>
+<li><strong>Labels</strong> \u2014 Freezing adds <code>lifecycle-frozen</code> (prevents bot closure) + <code>triage-frozen</code> (bookkeeping). Unfreezing removes both, restoring the stale countdown.</li>
+</ul>
+
 <h5>Setting Priority to Suggested</h5>
 <p>Activate priority mode in the Priority Scoring tab to bulk-update Jira priorities to the computed suggested values.</p>
 <ul style="margin:6px 0 0 16px;">
@@ -1308,6 +1352,9 @@ document.addEventListener('click', (e) => {
     } else if (tabId === 'priorities') {
       document.body.classList.toggle('priority-mode');
       updatePriorityFooter();
+    } else if (tabId === 'lifecycle') {
+      document.body.classList.toggle('freeze-mode');
+      updateFreezeFooter();
     } else {
       document.body.classList.toggle('close-mode');
       const isActive = document.body.classList.contains('close-mode');
@@ -1590,6 +1637,98 @@ function copyPriorityCommand() {
   const cmd = `cd ~/repos/work/AI/backlog-triage && python3 scripts/set_priority.py --execute --stdin <<'EOF'\n${JSON.stringify(manifest, null, 2)}\nEOF`;
   navigator.clipboard.writeText(cmd).then(() => {
     const btn = document.querySelector('#priority-modal-overlay .modal-confirm');
+    const original = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.style.background = '#22c55e';
+    setTimeout(() => { btn.textContent = original; btn.style.background = ''; }, 2000);
+  });
+}
+
+// --- Freeze mode functions ---
+function updateFreezeFooter() {
+  const footer = document.getElementById('freeze-footer');
+  if (!footer) return;
+  const freezeCbs = document.querySelectorAll('.freeze-cb:checked');
+  const unfreezeCbs = document.querySelectorAll('.unfreeze-cb:checked');
+  const total = freezeCbs.length + unfreezeCbs.length;
+  footer.classList.toggle('has-selection', total > 0);
+  const parts = [];
+  if (freezeCbs.length) parts.push(freezeCbs.length + ' to freeze');
+  if (unfreezeCbs.length) parts.push(unfreezeCbs.length + ' to unfreeze');
+  footer.querySelector('.freeze-count').textContent = parts.join(' + ') + ' selected';
+  const btn = document.getElementById('freeze-btn');
+  if (freezeCbs.length && !unfreezeCbs.length) btn.textContent = 'Freeze Selected';
+  else if (!freezeCbs.length && unfreezeCbs.length) btn.textContent = 'Unfreeze Selected';
+  else btn.textContent = 'Freeze / Unfreeze Selected';
+}
+
+function getFreezeTickets() {
+  return [...document.querySelectorAll('.freeze-cb:checked')].map(cb => ({
+    key: cb.dataset.key,
+    summary: cb.dataset.summary
+  }));
+}
+
+function getUnfreezeTickets() {
+  return [...document.querySelectorAll('.unfreeze-cb:checked')].map(cb => ({
+    key: cb.dataset.key,
+    summary: cb.dataset.summary
+  }));
+}
+
+function showFreezeModal() {
+  const freezeSelected = getFreezeTickets();
+  const unfreezeSelected = getUnfreezeTickets();
+  if (!freezeSelected.length && !unfreezeSelected.length) return;
+  const overlay = document.getElementById('freeze-modal-overlay');
+  const modal = overlay.querySelector('.close-modal');
+  let listHtml = '';
+
+  if (freezeSelected.length) {
+    listHtml += `<h4 style="color:#22d3ee;margin:8px 0 4px;">Freeze (${freezeSelected.length})</h4>`;
+    listHtml += `<p style="color:#9ca3af;font-size:12px;">Adds <code>lifecycle-frozen</code> + <code>triage-frozen</code> labels. Prevents lifecycle bot from auto-closing.</p>`;
+    listHtml += `<ul class="close-modal-list">`;
+    freezeSelected.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
+    listHtml += `</ul>`;
+  }
+
+  if (unfreezeSelected.length) {
+    listHtml += `<h4 style="color:#f59e0b;margin:8px 0 4px;">Unfreeze (${unfreezeSelected.length})</h4>`;
+    listHtml += `<p style="color:#9ca3af;font-size:12px;">Removes <code>lifecycle-frozen</code> + <code>triage-frozen</code> labels. Restores ticket to stale lifecycle countdown.</p>`;
+    listHtml += `<ul class="close-modal-list">`;
+    unfreezeSelected.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
+    listHtml += `</ul>`;
+  }
+
+  modal.innerHTML = `
+    <h3 style="color:#22d3ee;">Confirm Freeze / Unfreeze</h3>
+    ${listHtml}
+    <p style="color:#9ca3af;font-size:13px;margin-top:12px;">Click <strong>Copy CLI cmd</strong> to copy the command(s) to your clipboard, then paste into your terminal to execute.</p>
+    <div class="close-modal-actions">
+      <button class="modal-cancel" onclick="document.getElementById('freeze-modal-overlay').classList.remove('visible')">Close</button>
+      <button class="modal-confirm" onclick="copyFreezeCommand()">Copy CLI cmd</button>
+    </div>`;
+  overlay.classList.add('visible');
+}
+
+function copyFreezeCommand() {
+  const freezeSelected = getFreezeTickets();
+  const unfreezeSelected = getUnfreezeTickets();
+  const cmds = [];
+
+  if (freezeSelected.length) {
+    const manifest = { generated_at: new Date().toISOString(), items: freezeSelected.map(s => ({ key: s.key })) };
+    cmds.push(`cd ~/repos/work/AI/backlog-triage && python3 scripts/freeze_tickets.py --execute --stdin <<'EOF'\n${JSON.stringify(manifest, null, 2)}\nEOF`);
+  }
+
+  if (unfreezeSelected.length) {
+    const manifest = { generated_at: new Date().toISOString(), items: unfreezeSelected.map(s => ({ key: s.key })) };
+    cmds.push(`cd ~/repos/work/AI/backlog-triage && python3 scripts/unfreeze_tickets.py --execute --stdin <<'EOF'\n${JSON.stringify(manifest, null, 2)}\nEOF`);
+  }
+
+  const fullCmd = cmds.join('\n\n');
+  navigator.clipboard.writeText(fullCmd).then(() => {
+    const btn = document.querySelector('#freeze-modal-overlay .modal-confirm');
     const original = btn.textContent;
     btn.textContent = 'Copied!';
     btn.style.background = '#22c55e';
