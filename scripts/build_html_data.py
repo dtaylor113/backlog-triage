@@ -17,7 +17,7 @@ CLOSE_LOG_FILE = BASE_DIR / "close-log.csv"
 
 LOG_HEADERS = [
     "date", "open", "stale", "frozen", "epics", "sprint",
-    "orphaned", "duplicates", "obsolete", "escalated",
+    "orphaned", "duplicates", "escalated",
 ]
 
 
@@ -86,7 +86,6 @@ def load_metrics_log():
 def main():
     tickets_data = load_json(BASE_DIR / "tickets.json")
     duplicates = load_json(BASE_DIR / "duplicate_candidates.json")
-    obsolete = load_json(BASE_DIR / "obsolete_candidates.json")
     priorities = load_json(BASE_DIR / "priority_scores.json")
 
     all_tickets = tickets_data["tickets"] if tickets_data else []
@@ -101,7 +100,6 @@ def main():
     dup_count = 0
     if duplicates:
         dup_count = duplicates.get("duplicate_pairs_found", 0)
-    obsolete_count = obsolete.get("obsolete_candidates_found", 0) if obsolete else 0
     escalated_count = priorities.get("auto_escalated_count", 0) if priorities else 0
 
     # Load previous for deltas
@@ -112,7 +110,7 @@ def main():
         current = {
             "open": len(all_tickets), "stale": len(stale_tickets),
             "frozen": len(frozen_tickets), "orphaned": orphaned_count,
-            "obsolete": obsolete_count, "escalated": escalated_count,
+            "escalated": escalated_count,
         }
         for k in current:
             prev_val = int(prev.get(k, 0))
@@ -134,7 +132,6 @@ def main():
             "deltas": deltas,
         },
         "duplicates": duplicates,
-        "obsolete": obsolete,
         "priorities": priorities,
         "tickets": all_tickets,
         "stale_tickets": stale_tickets,
@@ -165,7 +162,6 @@ def main():
         "sprint": sprint_count,
         "orphaned": orphaned_count,
         "duplicates": dup_count,
-        "obsolete": obsolete_count,
         "escalated": escalated_count,
     }
     append_log(metrics)

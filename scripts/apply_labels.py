@@ -6,12 +6,11 @@ Usage:
   python apply_labels.py --apply            # Actually apply labels to Jira
   python apply_labels.py --apply --batch 20 # Apply to first 20 candidates only
 
-This script reads duplicate_candidates.json, obsolete_candidates.json, and
+This script reads duplicate_candidates.json and
 priority_scores.json and applies the appropriate labels to tickets.
 
 Labels applied:
 - duplicate-candidate (from duplicate detection)
-- obsolete-candidate (from obsolete detection, score >= 40)
 - suggested-priority-{blocker,critical,major,normal,minor} (from priority scoring)
 """
 
@@ -91,17 +90,6 @@ def collect_label_actions(batch_limit=None):
                                   f"(similarity: {pair['similarity']:.3f})",
                     })
 
-    # Obsolete candidates (score >= 40 — references deleted code)
-    obsolete = load_json(BASE_DIR / "obsolete_candidates.json")
-    if obsolete:
-        for candidate in obsolete.get("candidates", []):
-            if candidate["score"] >= 40:
-                actions.append({
-                    "key": candidate["key"],
-                    "label": "obsolete-candidate",
-                    "reason": "; ".join(candidate["reasons"][:2]),
-                })
-
     # Priority scores (only apply if mismatch)
     priorities = load_json(BASE_DIR / "priority_scores.json")
     if priorities:
@@ -123,7 +111,7 @@ def main():
     parser = argparse.ArgumentParser(description="Apply triage labels to Jira tickets")
     parser.add_argument("--apply", action="store_true", help="Actually apply labels (default is dry-run)")
     parser.add_argument("--batch", type=int, default=None, help="Limit to N label applications")
-    parser.add_argument("--type", choices=["duplicates", "obsolete", "priorities", "all"],
+    parser.add_argument("--type", choices=["duplicates", "priorities", "all"],
                         default="all", help="Which type of labels to apply")
     args = parser.parse_args()
 
@@ -140,7 +128,6 @@ def main():
     if args.type != "all":
         label_filter = {
             "duplicates": "duplicate-candidate",
-            "obsolete": "obsolete-candidate",
             "priorities": "suggested-priority-",
         }[args.type]
         actions = [a for a in actions if a["label"].startswith(label_filter) or a["label"] == label_filter]

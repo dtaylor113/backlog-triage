@@ -365,7 +365,6 @@ function render() {
 
   // Tabs (with counts)
   const escalatedCount = D.priorities ? D.priorities.auto_escalated_count : 0;
-  const obsoleteCount = D.obsolete ? D.obsolete.obsolete_candidates_found : 0;
   const dupGroups = findDuplicateGeneratedTickets();
   const dupTicketCount = dupGroups.reduce((sum, g) => sum + g.tickets.length, 0);
   const orphanedCount = D.tickets.filter(t => t.parent_status === 'Closed' || t.parent_status === 'Done').length;
@@ -373,7 +372,6 @@ function render() {
   html += `<div class="tab-bar">`;
   html += `<div class="tab active" data-tab="priorities">Priority Scoring (${escalatedCount} Auto-Escalated)</div>`;
   html += `<div class="tab" data-tab="lifecycle">Lifecycle</div>`;
-  html += `<div class="tab" data-tab="obsolete">Obsolete Candidates (${obsoleteCount})</div>`;
   html += `<div class="tab" data-tab="duplicates">Possible Duplicates (${dupTicketCount})</div>`;
   html += `<div class="tab" data-tab="cleanup">Orphaned Issues (${orphanedCount})</div>`;
   const triageClosed = (D.close_log || []).length;
@@ -381,7 +379,6 @@ function render() {
   html += `</div>`;
 
   html += renderPrioritiesTab();
-  html += renderObsoleteTab();
   html += renderDuplicatesTab();
   html += renderCleanupTab();
   html += renderLifecycleTab();
@@ -500,55 +497,6 @@ function renderPrioritiesTab() {
   return html;
 }
 
-function renderObsoleteTab() {
-  if (!D.obsolete) return `<div class="tab-content" id="tab-obsolete"><p>Obsolete detection not yet run.</p></div>`;
-
-  const candidates = D.obsolete.candidates;
-  let html = `<div class="tab-content" id="tab-obsolete">`;
-
-  html += `<h3>Obsolete Candidates (${candidates.length} total) <span class="info-btn" data-info="obsolete-total-info">?</span></h3>`;
-  html += `<div style="margin:8px 0 12px;color:#9ca3af;">Tickets scoring ≥ 20 on the Obsolete Score — cross-references descriptions against the current codebase to find deleted routes, removed files, and renamed components.</div>`;
-
-  // Filter
-  html += `<div class="filter-bar">`;
-  html += `<input type="text" id="obsolete-filter" placeholder="Filter by key or summary..." oninput="filterTable('obsolete-table','obsolete-filter')">`;
-  html += `</div>`;
-
-  html += `<table id="obsolete-table"><thead><tr>`;
-  html += `<th class="close-col" style="width:30px;"></th>`;
-  const obsoleteHeaders = [
-    {name: 'Type'},
-    {name: 'Key'},
-    {name: 'Summary'},
-    {name: 'Age (mo)'},
-    {name: 'Inactive (mo)'},
-    {name: 'Obsolete Score', info: 'obsolete-score-info'},
-    {name: 'Reasons'},
-  ];
-  obsoleteHeaders.forEach(h => {
-    const infoBtn = h.info ? `<span class="info-btn" data-info="${h.info}">?</span>` : '';
-    html += `<th>${h.name}${infoBtn}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
-  });
-  html += `</tr></thead><tbody>`;
-
-  candidates.forEach(c => {
-    html += `<tr>`;
-    html += `<td class="close-col"><input type="checkbox" class="close-cb" data-key="${esc(c.key)}" onchange="updateCloseFooter()"></td>`;
-    html += `<td>${esc(c.type)}</td>`;
-    html += `<td class="nowrap">${jiraLink(c.key)}</td>`;
-    html += `<td>${esc(c.summary)}</td>`;
-    html += `<td class="nowrap">${c.age_months.toFixed(0)}</td>`;
-    html += `<td class="nowrap">${c.inactivity_months.toFixed(0)}</td>`;
-    const obsColor = scoreColor(c.score);
-    const obsBarWidth = Math.min(c.score, 100);
-    html += `<td class="nowrap"><span class="score-bar" style="width:${obsBarWidth}px;background:${obsColor};"></span> ${c.score}</td>`;
-    html += `<td style="font-size:12px;">${c.reasons.map(r => esc(r)).join('<br>')}</td>`;
-    html += `</tr>`;
-  });
-
-  html += `</tbody></table></div>`;
-  return html;
-}
 
 const GENERATED_PREFIX_PATTERNS = [
   'create feature flag',
@@ -867,7 +815,7 @@ function renderHistoryTab() {
   const orphanClosed = byLabel['triage-closed-orphan'] || 0;
   const dupClosed = byLabel['triage-closed-duplicate'] || 0;
   const obsClosed = byLabel['triage-closed-obsolete'] || 0;
-  const triageClosed = orphanClosed + dupClosed + obsClosed;
+  const triageClosed = orphanClosed + dupClosed + obsClosed; // obsClosed kept for historical data
 
   // Split non-triage closures into Lifecycle (Bot) vs Lifecycle vs Other using recently_closed data
   const lifecycleBotClosed = recentlyClosed.filter(t => t.close_category === 'Lifecycle (Bot)' && (t.updated || '').slice(0,10) >= '2026-06-26').length;
@@ -882,8 +830,6 @@ function renderHistoryTab() {
   html += `<div class="card card-sm"><div class="value" style="color:#f59e0b;">${orphanClosed}</div><div class="label">Orphan</div></div>`;
   html += `<span class="card-operator">−</span>`;
   html += `<div class="card card-sm"><div class="value" style="color:#a78bfa;">${dupClosed}</div><div class="label">Duplicate</div></div>`;
-  html += `<span class="card-operator">−</span>`;
-  html += `<div class="card card-sm"><div class="value" style="color:#9ca3af;">${obsClosed}</div><div class="label">Obsolete</div></div>`;
   html += `<span class="card-operator">−</span>`;
   html += `<div class="card card-sm"><div class="value" style="color:#60a5fa;">${lifecycleBotClosed}</div><div class="label">Lifecycle (Bot)</div></div>`;
   html += `<span class="card-operator">−</span>`;
@@ -910,10 +856,9 @@ function renderHistoryTab() {
     const byWeek = {};
     closeLog.forEach(r => {
       const weekStart = getWeekStart(r.date || '');
-      byWeek[weekStart] = byWeek[weekStart] || { orphan: 0, duplicate: 0, obsolete: 0, total: 0 };
+      byWeek[weekStart] = byWeek[weekStart] || { orphan: 0, duplicate: 0, total: 0 };
       if ((r.label || '').includes('orphan')) byWeek[weekStart].orphan++;
       else if ((r.label || '').includes('duplicate')) byWeek[weekStart].duplicate++;
-      else if ((r.label || '').includes('obsolete')) byWeek[weekStart].obsolete++;
       byWeek[weekStart].total++;
     });
 
@@ -928,14 +873,12 @@ function renderHistoryTab() {
         const barMax = 300;
         const orphanW = maxTotal ? Math.round((w.orphan / maxTotal) * barMax) : 0;
         const dupW = maxTotal ? Math.round((w.duplicate / maxTotal) * barMax) : 0;
-        const obsW = maxTotal ? Math.round((w.obsolete / maxTotal) * barMax) : 0;
 
         html += `<div style="display:flex;align-items:center;gap:10px;margin:6px 0;">`;
         html += `<span style="min-width:90px;font-size:12px;color:#9ca3af;">${week}</span>`;
         html += `<div style="display:flex;height:20px;border-radius:3px;overflow:hidden;">`;
         if (orphanW) html += `<div style="width:${orphanW}px;background:#f59e0b;" title="Orphaned: ${w.orphan}"></div>`;
         if (dupW) html += `<div style="width:${dupW}px;background:#a78bfa;" title="Duplicate: ${w.duplicate}"></div>`;
-        if (obsW) html += `<div style="width:${obsW}px;background:#6b7280;" title="Obsolete: ${w.obsolete}"></div>`;
         html += `</div>`;
         html += `<span style="font-size:12px;color:#e5e7eb;font-weight:600;">${w.total}</span>`;
         html += `</div>`;
@@ -946,7 +889,6 @@ function renderHistoryTab() {
       html += `<div style="display:flex;gap:16px;margin:8px 0 20px;font-size:12px;">`;
       html += `<span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Orphaned</span>`;
       html += `<span><span style="display:inline-block;width:12px;height:12px;background:#a78bfa;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Duplicate</span>`;
-      html += `<span><span style="display:inline-block;width:12px;height:12px;background:#6b7280;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Obsolete</span>`;
       html += `</div>`;
     }
 
@@ -1289,35 +1231,12 @@ const INFO_CONTENT = {
   'category-info': `<h4>Category</h4>
 <p>How each closed ticket is classified:</p>
 <ul style="margin:6px 0 0 16px;">
-<li><strong style="color:#22c55e;">Triage</strong> — Ticket has a <span class="jira-label">triage-closed-orphan</span>, <span class="jira-label">triage-closed-duplicate</span>, or <span class="jira-label">triage-closed-obsolete</span> label. Closed via this backlog triage process.</li>
+<li><strong style="color:#22c55e;">Triage</strong> — Ticket has a <span class="jira-label">triage-closed-orphan</span> or <span class="jira-label">triage-closed-duplicate</span> label. Closed via this backlog triage process.</li>
 <li><strong style="color:#60a5fa;">Lifecycle (Bot)</strong> — Ticket has <span class="jira-label">lifecycle-stale</span> label and was closed by the lifecycle automation account. The bot adds the stale label and later auto-closes after ~90 days.</li>
 <li><strong style="color:#38bdf8;">Lifecycle</strong> — Ticket has <span class="jira-label">lifecycle-stale</span> label but was closed manually by a team member (not the bot). Human responded to the stale label and closed it with a reason.</li>
 <li><strong style="color:#64748b;">Other</strong> — No triage or lifecycle labels. Closed manually by a team member through normal workflow (completed work, won\u2019t do, etc.).</li>
 </ul>
 <p style="margin-top:10px;color:#9ca3af;font-size:0.85em;">The "Closed By" column shows the person who performed the closing transition, determined from the ticket's changelog.</p>`,
-
-  'obsolete-total-info': `<h4>How is this count determined?</h4>
-<p>A ticket appears in this list when its <strong>Obsolete Score reaches 20+</strong>. The score is computed by cross-referencing each ticket against the current codebase and team data:</p>
-<table><thead><tr><th>Signal</th><th>Points</th></tr></thead><tbody>
-<tr><td>References a deleted route or file in <code>src/</code></td><td>+40</td></tr>
-<tr><td>References a refactored/renamed component</td><td>+20</td></tr>
-<tr><td>Ticket age \u2265 18 months</td><td>+15</td></tr>
-<tr><td>No activity in \u2265 12 months</td><td>+15</td></tr>
-<tr><td>Reporter no longer on the team</td><td>+10</td></tr>
-</tbody></table>
-<p>Any ticket scoring \u2265 20 from these signals is included. It is <strong>not</strong> a date-range filter \u2014 a 6-month-old ticket referencing a deleted route (+40) qualifies, while a 24-month-old ticket with recent activity may not.</p>`,
-
-  'obsolete-score-info': `<h4>Obsolete Score</h4>
-<p>A composite score indicating how likely the ticket is obsolete:</p>
-<table><thead><tr><th>Signal</th><th>Points</th></tr></thead><tbody>
-<tr><td>References deleted route/file</td><td>+40</td></tr>
-<tr><td>References refactored component</td><td>+20</td></tr>
-<tr><td>Ticket age \u2265 18 months</td><td>+15</td></tr>
-<tr><td>No activity in \u2265 12 months</td><td>+15</td></tr>
-<tr><td>Reporter no longer on team</td><td>+10</td></tr>
-</tbody></table>
-<p>Threshold: score \u2265 20 to appear as a candidate.</p>
-<p style="margin-top:8px;color:#9ca3af;font-size:0.85em;">Note: "Parent is Closed" is handled separately in the Orphaned Issues tab.</p>`,
 
   'main-overview': `<h4>About This Report</h4>
 <p>The goal is twofold: <strong>surface the tickets that deserve attention</strong>, and <strong>systematically close the ones that no longer do</strong>.</p>
@@ -1327,7 +1246,6 @@ const INFO_CONTENT = {
 <ul style="margin:6px 0 0 16px;">
 <li><strong>Priority Scoring</strong> \u2014 Every ticket gets a computed score (0\u2013100) based on reporter source, comment activity, age, watchers, linked epics, and more. Compares computed vs. current Jira priority, and auto-escalates tickets with clear urgency signals (customer cases, SLA dates, external blockers).</li>
 <li><strong>Lifecycle</strong> \u2014 Tracks tickets marked <code>lifecycle-stale</code> (inactive for 180 days / ~6 months). The lifecycle bot will auto-close them after 90 more days (~3 months) of inactivity — 270 days (~9 months) total. Shows estimated close dates so you can rescue tickets that still matter.</li>
-<li><strong>Obsolete Candidates</strong> \u2014 Cross-references each ticket\u2019s description against the current codebase (<code>git ls-files</code> + ripgrep). Tickets referencing deleted routes, removed components, or refactored files score high.</li>
 <li><strong>Possible Duplicates</strong> \u2014 Detects cases where Jira automation ran multiple times on the same epic, creating duplicate generated child tasks.</li>
 <li><strong>Orphaned Issues</strong> \u2014 Open children whose parent epic is already Closed. These will never be worked on and should be closed or re-parented.</li>
 <li><strong>Close History</strong> \u2014 Two sub-tabs: <em>Triage</em> shows closures made via this triage process (with weekly bar charts and a revert mechanism); <em>All Closed</em> shows every ticket closed in the last 3 months with a "Category" column classifying each as Triage, Lifecycle (Bot), Lifecycle, or Other.</li>
@@ -1343,10 +1261,9 @@ const INFO_CONTENT = {
 <h5>Technical Details</h5>
 <ul style="margin:6px 0 0 16px;">
 <li><strong>Data source</strong> \u2014 Jira Cloud REST API v3 (paginated search, changelogs, transitions)</li>
-<li><strong>Obsolete detection</strong> \u2014 <code>git ls-files</code> + ripgrep to verify file/route existence</li>
 <li><strong>Priority scoring</strong> \u2014 Weighted formula across 10+ signals, normalized to 0\u2013100</li>
 <li><strong>Duplicate detection</strong> \u2014 Groups generated children by parent and flags duplicate summaries</li>
-<li><strong>Pipeline</strong> \u2014 7 Python scripts run sequentially: fetch \u2192 detect duplicates \u2192 detect obsolete \u2192 score priorities \u2192 report \u2192 build data \u2192 build standalone</li>
+<li><strong>Pipeline</strong> \u2014 6 Python scripts run sequentially: fetch \u2192 detect duplicates \u2192 score priorities \u2192 report \u2192 build data \u2192 build standalone</li>
 <li><strong>Output</strong> \u2014 Single self-contained HTML file (no server required) with embedded JSON data</li>
 </ul>
 <p style="margin-top:10px;color:#9ca3af;font-size:0.85em;">Source: <a href="https://github.com/dtaylor113/backlog-triage" style="color:#60a5fa;" target="_blank">github.com/dtaylor113/backlog-triage</a></p>
@@ -1377,8 +1294,8 @@ const INFO_CONTENT = {
 
 <h5 style="margin-left:12px;">Closing & Reverting Tickets</h5>
 <ul style="margin:6px 0 0 28px;">
-<li><strong>Close mode</strong> \u2014 Reveals checkboxes in the Obsolete, Duplicates, and Orphaned tabs to select tickets for closure.</li>
-<li><strong>Closures apply</strong> a Jira label (<span class="jira-label">triage-closed-orphan</span> <span class="jira-label">triage-closed-duplicate</span> or <span class="jira-label">triage-closed-obsolete</span>) and set the appropriate resolution. Nothing disappears silently.</li>
+<li><strong>Close mode</strong> \u2014 Reveals checkboxes in the Duplicates and Orphaned tabs to select tickets for closure.</li>
+<li><strong>Closures apply</strong> a Jira label (<span class="jira-label">triage-closed-orphan</span> or <span class="jira-label">triage-closed-duplicate</span>) and set the appropriate resolution. Nothing disappears silently.</li>
 <li><strong>Revert mode</strong> \u2014 Reveals checkboxes in the Closure Log to revert closures.</li>
 <li><strong>Revert restores</strong> the ticket\u2019s previous status, removes <span class="jira-label">triage-closed-*</span> label, and adds <span class="jira-label">triage-reverted</span>.</li>
 </ul>`,
@@ -1401,7 +1318,7 @@ const INFO_CONTENT = {
 
 <h5>Close / Revert Closures</h5>
 <ul style="margin:6px 0 0 16px;">
-<li><strong>Close mode</strong> \u2014 Triple-click the \u201cObsolete Candidates\u201d, \u201cPossible Duplicates\u201d, or \u201cOrphaned Issues\u201d primary tab. Checkboxes appear in those tables.</li>
+<li><strong>Close mode</strong> \u2014 Triple-click the \u201cPossible Duplicates\u201d or \u201cOrphaned Issues\u201d primary tab. Checkboxes appear in those tables.</li>
 <li><strong>Revert mode</strong> \u2014 Triple-click the \u201cTriage\u201d sub-tab inside Close History. Checkboxes appear in the Closure Log table.</li>
 </ul>
 
@@ -1547,13 +1464,6 @@ function syncOrphanParent(childCb) {
 // --- Close footer management ---
 function getSelectedTickets() {
   const selected = [];
-  // Obsolete
-  document.querySelectorAll('#obsolete-table .close-cb:checked').forEach(cb => {
-    const row = cb.closest('tr');
-    const key = row?.querySelector('a')?.textContent || '';
-    const summary = row?.cells[3]?.textContent || '';
-    selected.push({ key, summary, category: 'obsolete', resolution: 'Obsolete', label: 'triage-closed-obsolete', reason: 'Obsolete candidate (stale references)' });
-  });
   // Duplicates
   document.querySelectorAll('#dup-table .close-cb:checked').forEach(cb => {
     const key = cb.dataset.key || '';
@@ -1588,7 +1498,7 @@ function showCloseModal() {
   const overlay = document.getElementById('close-modal-overlay');
   const modal = overlay.querySelector('.close-modal');
 
-  const byCategory = { orphan: [], duplicate: [], obsolete: [] };
+  const byCategory = { orphan: [], duplicate: [] };
   selected.forEach(s => byCategory[s.category].push(s));
 
   let listHtml = '';
@@ -1604,13 +1514,6 @@ function showCloseModal() {
     listHtml += `<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Adds <span class="jira-label">triage-closed-duplicate</span> · Comment: "Closed via backlog triage — reason: Duplicate under [parent]"</div>`;
     listHtml += `<ul class="close-modal-list">`;
     byCategory.duplicate.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
-    listHtml += `</ul>`;
-  }
-  if (byCategory.obsolete.length) {
-    listHtml += `<h4 style="color:#9ca3af;margin:8px 0 4px;">Obsolete → Resolution: Obsolete</h4>`;
-    listHtml += `<div style="font-size:12px;color:#9ca3af;margin-bottom:6px;">Adds <span class="jira-label">triage-closed-obsolete</span> · Comment: "Closed via backlog triage — reason: Obsolete candidate (stale references)"</div>`;
-    listHtml += `<ul class="close-modal-list">`;
-    byCategory.obsolete.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
     listHtml += `</ul>`;
   }
 

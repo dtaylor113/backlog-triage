@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate a consolidated markdown report from all triage analysis outputs.
 
-Reads duplicate_candidates.json, obsolete_candidates.json, and priority_scores.json,
+Reads duplicate_candidates.json and priority_scores.json,
 then produces a single triage-report.md with actionable summaries.
 """
 
@@ -11,7 +11,6 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DUPLICATES_FILE = BASE_DIR / "duplicate_candidates.json"
-OBSOLETE_FILE = BASE_DIR / "obsolete_candidates.json"
 PRIORITIES_FILE = BASE_DIR / "priority_scores.json"
 OUTPUT_FILE = BASE_DIR / "triage-report.md"
 
@@ -64,30 +63,6 @@ def section_duplicates(data):
     lines.append("")
     return "\n".join(lines)
 
-
-def section_obsolete(data):
-    if not data or not data.get("candidates"):
-        return "## Obsolete Candidates\n\nNo obsolete candidates found (or analysis not yet run).\n"
-
-    lines = [
-        "## Obsolete Candidates",
-        "",
-        f"**{data['obsolete_candidates_found']} candidates** found (score ≥ 20)",
-        "",
-        "| Ticket | Summary | Score | Age (mo) | Inactive (mo) | Reasons |",
-        "|--------|---------|:-----:|:--------:|:------------:|---------|",
-    ]
-
-    for c in data["candidates"][:50]:
-        link = f"[{c['key']}]({JIRA_BASE}/{c['key']})"
-        reasons = "; ".join(c["reasons"][:2])
-        lines.append(
-            f"| {link} | {c['summary'][:50]} | {c['score']} | {c['age_months']:.0f} | "
-            f"{c['inactivity_months']:.0f} | {reasons} |"
-        )
-    lines.append("")
-
-    return "\n".join(lines)
 
 
 def section_priorities(data):
@@ -192,7 +167,6 @@ def main():
     print("Generating consolidated triage report...")
 
     duplicates = load_json(DUPLICATES_FILE)
-    obsolete = load_json(OBSOLETE_FILE)
     priorities = load_json(PRIORITIES_FILE)
     tickets_data = load_json(BASE_DIR / "tickets.json")
 
@@ -209,8 +183,6 @@ def main():
     stats = []
     if duplicates:
         stats.append(f"- Duplicate pairs: **{duplicates.get('duplicate_pairs_found', 0)}**")
-    if obsolete:
-        stats.append(f"- Obsolete candidates: **{obsolete.get('obsolete_candidates_found', 0)}**")
     if priorities:
         stats.append(f"- Tickets scored: **{priorities.get('total_tickets_scored', 0)}**")
         stats.append(f"- Priority mismatches: **{priorities.get('priority_mismatches', 0)}**")
@@ -222,8 +194,6 @@ def main():
         report_lines.append("\n---\n")
 
     report_lines.append(section_duplicates(duplicates))
-    report_lines.append("\n---\n")
-    report_lines.append(section_obsolete(obsolete))
     report_lines.append("\n---\n")
     report_lines.append(section_priorities(priorities))
     report_lines.append("\n---\n")

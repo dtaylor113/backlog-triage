@@ -2,7 +2,7 @@
 """Fetch all actionable OCMUI Jira tickets via paginated v3 API.
 
 Exports to ~/repos/work/AI/backlog-triage/tickets.json with fields needed
-for duplicate detection, obsolete detection, and priority scoring.
+for duplicate detection and priority scoring.
 """
 
 import json
