@@ -132,7 +132,7 @@ th .resize-handle:hover, th .resize-handle.active { background: #60a5fa; }
   color: #e5e7eb; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
 .info-popup.visible { display: block; }
-.info-popup.info-popup-lg { max-width: 640px; max-height: 75vh; overflow-y: auto; }
+.info-popup.info-popup-lg { max-width: 830px; max-height: 75vh; overflow-y: auto; }
 .info-popup h4 { color: #93c5fd; margin-bottom: 8px; font-size: 13px; }
 .info-popup h5 { color: #60a5fa; margin: 14px 0 6px; font-size: 12px; border-bottom: 1px solid #374151; padding-bottom: 4px; }
 .info-popup table { margin: 8px 0; font-size: 11px; }
@@ -1123,20 +1123,11 @@ const INFO_CONTENT = {
 <li><strong>Triage History</strong> \u2014 Running log of all closures made via this process, with weekly bar charts and a revert mechanism.</li>
 </ul>
 
-<h5>Triage & Closure Process</h5>
-<ul style="margin:6px 0 0 16px;">
-<li>All closures apply a Jira label (<code>triage-closed-orphan</code>, <code>triage-closed-duplicate</code>, <code>triage-closed-obsolete</code>) and an appropriate resolution (Won\u2019t Do, Duplicate, or Obsolete).</li>
-<li>Nothing disappears silently \u2014 labels make triaged tickets easy to find and filter in Jira.</li>
-<li>Closures can be <strong>reverted</strong> from the Triage History tab. Activate revert mode to unlock checkboxes. The revert script restores the ticket\u2019s previous status and swaps the label to <code>triage-reverted</code>.</li>
-</ul>
-
 <h5>How to Use This Report</h5>
 <ul style="margin:6px 0 0 16px;">
 <li><strong>Sort</strong> \u2014 Click any column header to sort ascending/descending.</li>
 <li><strong>Filter</strong> \u2014 Use the search boxes to filter by key, summary, or type.</li>
 <li><strong>Info tips</strong> \u2014 Click (?) icons on column headers for scoring/methodology details.</li>
-<li><strong>Close mode</strong> \u2014 Activate close mode to reveal checkboxes. Select tickets, click \u201cClose Selected\u201d, then copy the CLI command to execute.</li>
-<li><strong>Revert mode</strong> \u2014 Activate revert mode to reveal revert checkboxes in the Closure Log.</li>
 </ul>
 
 <h5>Technical Details</h5>
@@ -1155,6 +1146,15 @@ const INFO_CONTENT = {
 <li><strong>No credentials in the repo</strong> \u2014 Jira API tokens and email are read exclusively from environment variables (<code>$JIRA_EMAIL</code>, <code>$JIRA_TOKEN</code>). No secrets, tokens, or passwords are stored in source control.</li>
 <li><strong>No raw data committed</strong> \u2014 Fetched ticket data, embeddings, and generated CSV logs are all in <code>.gitignore</code>. The repository contains only scripts and the HTML template.</li>
 <li><strong>Private distribution only</strong> \u2014 The standalone HTML file is shared exclusively via a private Slack channel visible only to the OCMUI team. It is not hosted on any public URL.</li>
+</ul>
+
+<h5>Closing & Reverting Tickets</h5>
+<p>This report includes interactive controls for closing and reverting tickets directly from the dashboard.</p>
+<ul style="margin:6px 0 0 16px;">
+<li><strong>Close mode</strong> \u2014 Activate close mode to reveal checkboxes in the Obsolete, Duplicates, and Orphaned tabs. Select tickets, click \u201cClose Selected\u201d, review the confirmation dialog, then copy the CLI command to execute in your terminal.</li>
+<li><strong>Closures apply</strong> a Jira label (<code>triage-closed-orphan</code>, <code>triage-closed-duplicate</code>, or <code>triage-closed-obsolete</code>) and set the appropriate resolution (Won\u2019t Do, Duplicate, or Obsolete). Nothing disappears silently.</li>
+<li><strong>Revert mode</strong> \u2014 Activate revert mode in the Triage History tab to reveal checkboxes in the Closure Log. Select tickets to revert, review the confirmation, and copy the CLI command.</li>
+<li><strong>Revert restores</strong> the ticket\u2019s previous status (looked up from the Jira changelog), removes the <code>triage-closed-*</code> label, and adds <code>triage-reverted</code>.</li>
 </ul>`,
 };
 
@@ -1182,7 +1182,7 @@ document.addEventListener('click', (e) => {
     const rect = btn.getBoundingClientRect();
     if (isLarge) {
       popup.style.top = '60px';
-      popup.style.left = Math.max(20, (window.innerWidth - 660) / 2) + 'px';
+      popup.style.left = Math.max(20, (window.innerWidth - 850) / 2) + 'px';
     } else {
       popup.style.top = (rect.bottom + 8) + 'px';
       popup.style.left = Math.min(rect.left, window.innerWidth - 440) + 'px';
