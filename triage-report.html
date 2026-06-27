@@ -287,7 +287,8 @@ function render() {
   html += `<div class="tab" data-tab="obsolete">Obsolete Candidates (${obsoleteCount})</div>`;
   html += `<div class="tab" data-tab="duplicates">Possible Duplicates (${dupTicketCount})</div>`;
   html += `<div class="tab" data-tab="cleanup">Orphaned Issues (${orphanedCount})</div>`;
-  html += `<div class="tab" data-tab="history">Triage History</div>`;
+  const triageClosed = (D.close_log || []).length;
+  html += `<div class="tab" data-tab="history">Triage History (<span style="color:#22c55e;">&#8595;</span> ${triageClosed})</div>`;
   html += `</div>`;
 
   html += renderPrioritiesTab();
@@ -804,7 +805,7 @@ function renderHistoryTab() {
   // --- Closure detail table ---
   html += `<h3 style="margin-top:24px;">Closure Log</h3>`;
   html += `<table id="history-table"><thead><tr>`;
-  html += `<th class="revert-col" style="width:30px;"></th>`;
+  html += `<th class="revert-col" style="width:auto;font-size:12px;">Revert Closure?</th>`;
   ['Date','Key','Summary','Resolution','Label','Reason'].forEach(h => {
     html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
   });
