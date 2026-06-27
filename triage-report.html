@@ -1279,64 +1279,97 @@ const INFO_CONTENT = {
 <li><strong>Private distribution only</strong> \u2014 The standalone HTML file is shared exclusively via a private Slack channel visible only to the OCMUI team. It is not hosted on any public URL.</li>
 </ul>
 
-<h5 style="font-size:14px;letter-spacing:1px;">EDIT MODES</h5>
+<h5 style="font-size:14px;letter-spacing:1px;" id="edit-modes-title">EDIT MODES</h5>
 <p>Edit modes allow you to take action on tickets directly from this report. All edit modes are secure: they generate CLI commands that you review and execute in your own authenticated terminal. No changes are made from this HTML file itself \u2014 it remains a read-only document. Every action is reversible \u2014 closures, priority changes, and freezes can all be reverted directly from this report using the corresponding revert/unfreeze controls.</p>
 
 <h5 style="margin-left:12px;">Freezing Lifecycle Tickets</h5>
 <ul style="margin:6px 0 0 28px;">
-<li><strong>Freeze mode</strong> \u2014 Activate by triple-clicking the \u201cStale\u201d sub-tab. Reveals \u201cFreeze?\u201d checkboxes on stale tickets.</li>
-<li><strong>Unfreeze mode</strong> \u2014 Activate by triple-clicking the \u201cFrozen\u201d sub-tab. Reveals \u201cUnfreeze?\u201d checkboxes.</li>
+<li><strong>Freeze mode</strong> \u2014 Reveals \u201cFreeze?\u201d checkboxes on stale tickets to prevent auto-closure.</li>
+<li><strong>Unfreeze mode</strong> \u2014 Reveals \u201cUnfreeze?\u201d checkboxes on frozen tickets to restore the stale countdown.</li>
 <li><strong>Labels</strong> \u2014 Freezing adds <span class="jira-label">lifecycle-frozen</span> <span class="jira-label">triage-frozen</span>. Unfreezing removes both and adds <span class="jira-label">lifecycle-stale</span>.</li>
 </ul>
 
 <h5 style="margin-left:12px;">Setting Priority to Suggested</h5>
 <ul style="margin:6px 0 0 28px;">
-<li><strong>Priority mode</strong> \u2014 Activate by triple-clicking the \u201cPriority Scoring\u201d tab. Reveals \u201cSet Priority to Suggested?\u201d checkboxes where current differs from suggested.</li>
+<li><strong>Priority mode</strong> \u2014 Reveals \u201cSet Priority to Suggested?\u201d checkboxes where the current Jira priority differs from the suggested value.</li>
 <li><strong>Labels for reversibility</strong> \u2014 Adds <span class="jira-label">triage-original-priority-{name}</span> so the original value is preserved.</li>
-<li><strong>Revert priority</strong> \u2014 Triple-click the \u201cSuggested Priorities Accepted\u201d box to filter to accepted tickets and reveal \u201cRevert Suggested Priority?\u201d checkboxes.</li>
+<li><strong>Revert priority</strong> \u2014 Filters to accepted tickets and reveals \u201cRevert Suggested Priority?\u201d checkboxes.</li>
 </ul>
 
 <h5 style="margin-left:12px;">Closing & Reverting Tickets</h5>
 <ul style="margin:6px 0 0 28px;">
-<li><strong>Close mode</strong> \u2014 Activate by triple-clicking any primary tab (except Priority Scoring, Lifecycle, or Close History). Reveals checkboxes in Obsolete, Duplicates, and Orphaned tabs.</li>
+<li><strong>Close mode</strong> \u2014 Reveals checkboxes in the Obsolete, Duplicates, and Orphaned tabs to select tickets for closure.</li>
 <li><strong>Closures apply</strong> a Jira label (<span class="jira-label">triage-closed-orphan</span> <span class="jira-label">triage-closed-duplicate</span> or <span class="jira-label">triage-closed-obsolete</span>) and set the appropriate resolution. Nothing disappears silently.</li>
-<li><strong>Revert mode</strong> \u2014 Activate by triple-clicking the \u201cClose History\u201d tab. Reveals checkboxes in the Closure Log to revert closures.</li>
+<li><strong>Revert mode</strong> \u2014 Reveals checkboxes in the Closure Log to revert closures.</li>
 <li><strong>Revert restores</strong> the ticket\u2019s previous status, removes <span class="jira-label">triage-closed-*</span> label, and adds <span class="jira-label">triage-reverted</span>.</li>
 </ul>`,
+
+  'admin-edit-modes': `<h4>EDIT MODES \u2014 Admin Reference</h4>
+<p style="color:#f59e0b;">How to activate each edit mode:</p>
+
+<h5>Freeze / Unfreeze</h5>
+<ul style="margin:6px 0 0 16px;">
+<li><strong>Freeze mode</strong> \u2014 Triple-click the \u201cStale\u201d sub-tab in the Lifecycle tab</li>
+<li><strong>Unfreeze mode</strong> \u2014 Triple-click the \u201cFrozen\u201d sub-tab in the Lifecycle tab</li>
+</ul>
+
+<h5>Set Priority / Revert Priority</h5>
+<ul style="margin:6px 0 0 16px;">
+<li><strong>Priority mode</strong> \u2014 Triple-click the \u201cPriority Scoring\u201d primary tab</li>
+<li><strong>Revert priority mode</strong> \u2014 Triple-click the \u201cSuggested Priorities Accepted\u201d green box</li>
+</ul>
+
+<h5>Close / Revert Closures</h5>
+<ul style="margin:6px 0 0 16px;">
+<li><strong>Close mode</strong> \u2014 Triple-click any primary tab (except Priority Scoring, Lifecycle, or Close History)</li>
+<li><strong>Revert mode</strong> \u2014 Triple-click the \u201cClose History\u201d primary tab</li>
+</ul>
+
+<p style="margin-top:14px;color:#9ca3af;font-size:11px;">Triple-click = 3 clicks within 1.2 seconds on the same element. Clicking again deactivates the mode.</p>`,
 };
+
+function openInfoPopup(key) {
+  let popup = document.querySelector('.info-popup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.className = 'info-popup';
+    document.body.appendChild(popup);
+  }
+  const isLarge = key === 'main-overview' || key === 'admin-edit-modes';
+  popup.classList.toggle('info-popup-lg', isLarge);
+  popup.dataset.source = key;
+  popup.innerHTML = `<span class="close-btn">\u00D7</span>${INFO_CONTENT[key] || ''}`;
+  if (isLarge) {
+    popup.style.top = '60px';
+    popup.style.left = Math.max(20, (window.innerWidth - 850) / 2) + 'px';
+  } else {
+    popup.style.top = '80px';
+    popup.style.left = Math.max(20, (window.innerWidth - 440) / 2) + 'px';
+  }
+  popup.classList.add('visible');
+  popup.querySelector('.close-btn').addEventListener('click', () => popup.classList.remove('visible'));
+}
 
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('.info-btn, .info-btn-lg');
   const existing = document.querySelector('.info-popup.visible');
+  const insidePopup = e.target.closest('.info-popup');
 
-  if (existing && (!btn || existing.dataset.source !== btn.dataset.info)) {
+  if (existing && !insidePopup && !btn) {
     existing.classList.remove('visible');
   }
 
   if (btn) {
     e.stopPropagation();
-    let popup = document.querySelector('.info-popup');
-    if (!popup) {
-      popup = document.createElement('div');
-      popup.className = 'info-popup';
-      document.body.appendChild(popup);
-    }
+    if (existing) existing.classList.remove('visible');
     const key = btn.dataset.info;
-    const isLarge = key === 'main-overview';
-    popup.classList.toggle('info-popup-lg', isLarge);
-    popup.dataset.source = key;
-    popup.innerHTML = `<span class="close-btn">\u00D7</span>${INFO_CONTENT[key] || ''}`;
     const rect = btn.getBoundingClientRect();
-    if (isLarge) {
-      popup.style.top = '60px';
-      popup.style.left = Math.max(20, (window.innerWidth - 850) / 2) + 'px';
-    } else {
+    openInfoPopup(key);
+    const popup = document.querySelector('.info-popup');
+    if (key !== 'main-overview' && key !== 'admin-edit-modes') {
       popup.style.top = (rect.bottom + 8) + 'px';
       popup.style.left = Math.min(rect.left, window.innerWidth - 440) + 'px';
     }
-    popup.classList.add('visible');
-
-    popup.querySelector('.close-btn').addEventListener('click', () => popup.classList.remove('visible'));
   }
 
   // Close mode checkbox handling — prevent row expand/collapse when clicking checkboxes
@@ -1653,6 +1686,23 @@ function copyPriorityCommand() {
     setTimeout(() => { btn.textContent = original; btn.style.background = ''; }, 2000);
   });
 }
+
+// --- Admin EDIT MODES info tip (triple-click on EDIT MODES title in info panel) ---
+let editModesClickCount = 0;
+let editModesClickTimer = null;
+document.addEventListener('click', (e) => {
+  const title = e.target.closest('#edit-modes-title');
+  if (!title) { editModesClickCount = 0; return; }
+  editModesClickCount++;
+  clearTimeout(editModesClickTimer);
+  editModesClickTimer = setTimeout(() => { editModesClickCount = 0; }, 1200);
+  if (editModesClickCount >= 3) {
+    editModesClickCount = 0;
+    const existing = document.querySelector('.info-popup.visible');
+    if (existing) existing.classList.remove('visible');
+    setTimeout(() => openInfoPopup('admin-edit-modes'), 50);
+  }
+});
 
 // --- Priority revert mode (triple-click on Accepted box) ---
 let acceptedClickCount = 0;
