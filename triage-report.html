@@ -1306,26 +1306,27 @@ const INFO_CONTENT = {
 
   'admin-edit-modes': `<h4>EDIT MODES \u2014 Admin Reference</h4>
 <p style="color:#f59e0b;">How to activate each edit mode:</p>
+<p style="color:#9ca3af;font-size:12px;margin:8px 0;">When activated, a first-column of checkboxes appears in the relevant table. Select tickets, then use the sticky footer at the bottom of the screen to proceed. The footer shows a count of selected tickets and action buttons. Clicking the action button opens a confirmation dialog listing what will happen, then \u201cCopy CLI cmd\u201d copies the command to your clipboard \u2014 paste it into your terminal to execute.</p>
 
 <h5>Freeze / Unfreeze</h5>
 <ul style="margin:6px 0 0 16px;">
-<li><strong>Freeze mode</strong> \u2014 Triple-click the \u201cStale\u201d sub-tab in the Lifecycle tab</li>
-<li><strong>Unfreeze mode</strong> \u2014 Triple-click the \u201cFrozen\u201d sub-tab in the Lifecycle tab</li>
+<li><strong>Freeze mode</strong> \u2014 Triple-click the \u201cStale\u201d sub-tab in the Lifecycle tab. Checkboxes appear in the Stale table.</li>
+<li><strong>Unfreeze mode</strong> \u2014 Triple-click the \u201cFrozen\u201d sub-tab in the Lifecycle tab. Checkboxes appear in the Frozen table.</li>
 </ul>
 
 <h5>Set Priority / Revert Priority</h5>
 <ul style="margin:6px 0 0 16px;">
-<li><strong>Priority mode</strong> \u2014 Triple-click the \u201cPriority Scoring\u201d primary tab</li>
-<li><strong>Revert priority mode</strong> \u2014 Triple-click the \u201cSuggested Priorities Accepted\u201d green box</li>
+<li><strong>Priority mode</strong> \u2014 Triple-click the \u201cPriority Scoring\u201d primary tab. Checkboxes appear on rows where current priority differs from suggested.</li>
+<li><strong>Revert priority mode</strong> \u2014 Triple-click the \u201cSuggested Priorities Accepted\u201d green box. Table filters to accepted tickets and checkboxes appear.</li>
 </ul>
 
 <h5>Close / Revert Closures</h5>
 <ul style="margin:6px 0 0 16px;">
-<li><strong>Close mode</strong> \u2014 Triple-click any primary tab (except Priority Scoring, Lifecycle, or Close History)</li>
-<li><strong>Revert mode</strong> \u2014 Triple-click the \u201cClose History\u201d primary tab</li>
+<li><strong>Close mode</strong> \u2014 Triple-click the \u201cObsolete Candidates\u201d, \u201cPossible Duplicates\u201d, or \u201cOrphaned Issues\u201d primary tab. Checkboxes appear in those tables.</li>
+<li><strong>Revert mode</strong> \u2014 Triple-click the \u201cClose History\u201d primary tab. Checkboxes appear in the Closure Log table.</li>
 </ul>
 
-<p style="margin-top:14px;color:#9ca3af;font-size:11px;">Triple-click = 3 clicks within 1.2 seconds on the same element. Clicking again deactivates the mode.</p>`,
+<p style="margin-top:14px;color:#9ca3af;font-size:11px;">Triple-click = 3 clicks within 1.2 seconds on the same element. Clicking the same trigger again deactivates the mode and hides checkboxes.</p>`,
 };
 
 function openInfoPopup(key) {
