@@ -1264,28 +1264,29 @@ const INFO_CONTENT = {
 <li><strong>Private distribution only</strong> \u2014 The standalone HTML file is shared exclusively via a private Slack channel visible only to the OCMUI team. It is not hosted on any public URL.</li>
 </ul>
 
-<h5>Freezing Lifecycle Tickets</h5>
-<p>Activate freeze mode in the Lifecycle tab to bulk-freeze stale tickets, preventing the lifecycle bot from auto-closing them.</p>
-<ul style="margin:6px 0 0 16px;">
-<li><strong>Freeze mode</strong> \u2014 Activate freeze mode to reveal \u201cFreeze?\u201d checkboxes on stale tickets and \u201cUnfreeze?\u201d checkboxes on frozen tickets that were frozen by triage.</li>
-<li><strong>Labels</strong> \u2014 Freezing adds <code>lifecycle-frozen</code> (prevents bot closure) + <code>triage-frozen</code> (bookkeeping). Unfreezing removes both, restoring the stale countdown.</li>
+<h5 style="font-size:14px;letter-spacing:1px;">EDIT MODE</h5>
+<p>Edit modes allow you to take action on tickets directly from this report. All edit modes are secure: they generate CLI commands that you review and execute in your own authenticated terminal. No changes are made from this HTML file itself \u2014 it remains a read-only document.</p>
+
+<h5 style="margin-left:12px;">Freezing Lifecycle Tickets</h5>
+<ul style="margin:6px 0 0 28px;">
+<li><strong>Freeze mode</strong> \u2014 Activate by triple-clicking the \u201cStale\u201d sub-tab. Reveals \u201cFreeze?\u201d checkboxes on stale tickets.</li>
+<li><strong>Unfreeze mode</strong> \u2014 Activate by triple-clicking the \u201cFrozen\u201d sub-tab. Reveals \u201cUnfreeze?\u201d checkboxes.</li>
+<li><strong>Labels</strong> \u2014 Freezing adds <code>lifecycle-frozen</code> + <code>triage-frozen</code>. Unfreezing removes both, restoring the stale countdown.</li>
 </ul>
 
-<h5>Setting Priority to Suggested</h5>
-<p>Activate priority mode in the Priority Scoring tab to bulk-update Jira priorities to the computed suggested values.</p>
-<ul style="margin:6px 0 0 16px;">
-<li><strong>Priority mode</strong> \u2014 Activate priority mode to reveal \u201cSet Priority?\u201d checkboxes on rows where the current Jira priority differs from the suggested value.</li>
-<li><strong>Labels for reversibility</strong> \u2014 When a priority is changed, a <code>triage-original-priority-{name}</code> label is added (e.g. <code>triage-original-priority-normal</code>) so the original value is preserved.</li>
+<h5 style="margin-left:12px;">Setting Priority to Suggested</h5>
+<ul style="margin:6px 0 0 28px;">
+<li><strong>Priority mode</strong> \u2014 Activate by triple-clicking the \u201cPriority Scoring\u201d tab. Reveals \u201cSet Priority to Suggested?\u201d checkboxes where current differs from suggested.</li>
+<li><strong>Labels for reversibility</strong> \u2014 Adds <code>triage-original-priority-{name}</code> so the original value is preserved.</li>
 <li><strong>Revert priority</strong> \u2014 Triple-click the \u201cSuggested Priorities Accepted\u201d box to filter to accepted tickets and reveal \u201cRevert Suggested Priority?\u201d checkboxes.</li>
 </ul>
 
-<h5>Closing & Reverting Tickets</h5>
-<p>This report includes interactive controls for closing and reverting tickets directly from the dashboard.</p>
-<ul style="margin:6px 0 0 16px;">
-<li><strong>Close mode</strong> \u2014 Activate close mode to reveal checkboxes in the Obsolete, Duplicates, and Orphaned tabs. Select tickets, click \u201cClose Selected\u201d, review the confirmation dialog, then copy the CLI command to execute in your terminal. <strong><em>CLI commands require a terminal with the correct environment variables configured. See Security Precautions above.</em></strong></li>
-<li><strong>Closures apply</strong> a Jira label (<code>triage-closed-orphan</code>, <code>triage-closed-duplicate</code>, or <code>triage-closed-obsolete</code>) and set the appropriate resolution (Won\u2019t Do, Duplicate, or Obsolete). Nothing disappears silently.</li>
-<li><strong>Revert mode</strong> \u2014 Activate revert mode in the Close History tab to reveal checkboxes in the Closure Log. Select tickets to revert, review the confirmation, and copy the CLI command.</li>
-<li><strong>Revert restores</strong> the ticket\u2019s previous status (looked up from the Jira changelog), removes the <code>triage-closed-*</code> label, and adds <code>triage-reverted</code>.</li>
+<h5 style="margin-left:12px;">Closing & Reverting Tickets</h5>
+<ul style="margin:6px 0 0 28px;">
+<li><strong>Close mode</strong> \u2014 Activate by triple-clicking any primary tab (except Priority Scoring, Lifecycle, or Close History). Reveals checkboxes in Obsolete, Duplicates, and Orphaned tabs.</li>
+<li><strong>Closures apply</strong> a Jira label (<code>triage-closed-orphan</code>, <code>triage-closed-duplicate</code>, or <code>triage-closed-obsolete</code>) and set the appropriate resolution. Nothing disappears silently.</li>
+<li><strong>Revert mode</strong> \u2014 Activate by triple-clicking the \u201cClose History\u201d tab. Reveals checkboxes in the Closure Log to revert closures.</li>
+<li><strong>Revert restores</strong> the ticket\u2019s previous status, removes the <code>triage-closed-*</code> label, and adds <code>triage-reverted</code>.</li>
 </ul>`,
 };
 
