@@ -267,41 +267,46 @@ body.revert-mode .revert-footer.has-selection { display: flex; }
   padding: 8px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
 }
 .revert-footer .revert-btn-action:hover { background: #d97706; }
+.clear-btn {
+  background: #374151; color: #9ca3af; border: 1px solid #4b5563; border-radius: 6px;
+  padding: 6px 14px; font-size: 13px; cursor: pointer;
+}
+.clear-btn:hover { background: #4b5563; color: #e5e7eb; }
 </style>
 </head>
 <body>
 <div id="app"></div>
 <div class="close-footer" id="close-footer">
   <span class="close-count">0 tickets selected</span>
-  <button class="close-btn-action" onclick="showCloseModal()">Close Selected</button>
+  <div><button class="clear-btn" onclick="clearSelection('.close-cb',updateCloseFooter)">Clear Selected</button> <button class="close-btn-action" onclick="showCloseModal()">Close Selected</button></div>
 </div>
 <div class="close-modal-overlay" id="close-modal-overlay">
   <div class="close-modal"></div>
 </div>
 <div class="revert-footer" id="revert-footer">
   <span class="revert-count">0 tickets selected</span>
-  <button class="revert-btn-action" onclick="showRevertModal()">Revert Selected</button>
+  <div><button class="clear-btn" onclick="clearSelection('.revert-cb',updateRevertFooter)">Clear Selected</button> <button class="revert-btn-action" onclick="showRevertModal()">Revert Selected</button></div>
 </div>
 <div class="close-modal-overlay" id="revert-modal-overlay">
   <div class="close-modal"></div>
 </div>
 <div class="priority-footer" id="priority-footer">
   <span class="priority-count">0 tickets selected</span>
-  <button class="priority-btn-action" onclick="showPriorityModal()">Set Priority</button>
+  <div><button class="clear-btn" onclick="clearSelection('.priority-cb',updatePriorityFooter)">Clear Selected</button> <button class="priority-btn-action" onclick="showPriorityModal()">Set Priority</button></div>
 </div>
 <div class="close-modal-overlay" id="priority-modal-overlay">
   <div class="close-modal"></div>
 </div>
 <div class="priority-revert-footer" id="priority-revert-footer">
   <span class="priority-revert-count">0 tickets selected</span>
-  <button class="priority-revert-btn-action" onclick="showPriorityRevertModal()">Revert Priority</button>
+  <div><button class="clear-btn" onclick="clearSelection('.priority-revert-cb',updatePriorityRevertFooter)">Clear Selected</button> <button class="priority-revert-btn-action" onclick="showPriorityRevertModal()">Revert Priority</button></div>
 </div>
 <div class="close-modal-overlay" id="priority-revert-modal-overlay">
   <div class="close-modal"></div>
 </div>
 <div class="freeze-footer" id="freeze-footer">
   <span class="freeze-count">0 tickets selected</span>
-  <button class="freeze-btn-action" id="freeze-btn" onclick="showFreezeModal()">Freeze Selected</button>
+  <div><button class="clear-btn" onclick="clearSelection('.freeze-cb,.unfreeze-cb',updateFreezeFooter)">Clear Selected</button> <button class="freeze-btn-action" id="freeze-btn" onclick="showFreezeModal()">Freeze Selected</button></div>
 </div>
 <div class="close-modal-overlay" id="freeze-modal-overlay">
   <div class="close-modal"></div>
@@ -310,6 +315,11 @@ body.revert-mode .revert-footer.has-selection { display: flex; }
 <script>
 const D = window.TRIAGE_DATA;
 const JIRA = 'https://redhat.atlassian.net/browse/';
+
+function clearSelection(selector, updateFn) {
+  document.querySelectorAll(selector).forEach(cb => { cb.checked = false; });
+  if (updateFn) updateFn();
+}
 
 function jiraLink(key) { return `<a href="${JIRA}${key}" target="_blank">${key}</a>`; }
 function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
