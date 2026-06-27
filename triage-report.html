@@ -186,6 +186,23 @@ body.close-mode .close-footer.has-selection { display: flex; }
   font-size: 12px; color: #6b7280; cursor: default;
 }
 body.close-mode .unlock-indicator { color: #ef4444; }
+
+/* Revert mode (hidden until triple-click on History tab) */
+.revert-col { display: none; }
+body.revert-mode .revert-col { display: table-cell; }
+.revert-col input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: #f59e0b; }
+.revert-footer {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
+  background: #1f2937; border-top: 2px solid #f59e0b; padding: 10px 24px;
+  align-items: center; justify-content: space-between; gap: 16px;
+}
+body.revert-mode .revert-footer.has-selection { display: flex; }
+.revert-footer .revert-count { color: #e5e7eb; font-weight: 600; }
+.revert-footer .revert-btn-action {
+  background: #f59e0b; color: #000; border: none; border-radius: 6px;
+  padding: 8px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.revert-footer .revert-btn-action:hover { background: #d97706; }
 </style>
 </head>
 <body>
@@ -195,6 +212,13 @@ body.close-mode .unlock-indicator { color: #ef4444; }
   <button class="close-btn-action" onclick="showCloseModal()">Close Selected</button>
 </div>
 <div class="close-modal-overlay" id="close-modal-overlay">
+  <div class="close-modal"></div>
+</div>
+<div class="revert-footer" id="revert-footer">
+  <span class="revert-count">0 tickets selected</span>
+  <button class="revert-btn-action" onclick="showRevertModal()">Revert Selected</button>
+</div>
+<div class="close-modal-overlay" id="revert-modal-overlay">
   <div class="close-modal"></div>
 </div>
 <script src="triage-data.js"></script>
@@ -780,12 +804,14 @@ function renderHistoryTab() {
   // --- Closure detail table ---
   html += `<h3 style="margin-top:24px;">Closure Log</h3>`;
   html += `<table id="history-table"><thead><tr>`;
+  html += `<th class="revert-col" style="width:30px;"></th>`;
   ['Date','Key','Summary','Resolution','Label','Reason'].forEach(h => {
     html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
   });
   html += `</tr></thead><tbody>`;
   closeLog.slice().reverse().forEach(r => {
     html += `<tr>`;
+    html += `<td class="revert-col"><input type="checkbox" class="revert-cb" data-key="${esc(r.key)}" data-summary="${esc(r.summary || '')}" onchange="updateRevertFooter()"></td>`;
     html += `<td class="nowrap">${esc(r.date)}</td>`;
     html += `<td class="nowrap">${jiraLink(r.key)}</td>`;
     html += `<td>${esc(r.summary || '')}</td>`;
@@ -1134,26 +1160,33 @@ document.addEventListener('click', (e) => {
     }
   }
 });
-// --- Triple-click unlock for close mode ---
+// --- Triple-click unlock for close mode / revert mode ---
 let tabClickCount = 0;
 let tabClickTimer = null;
+let lastClickedTab = null;
 document.addEventListener('click', (e) => {
   const tab = e.target.closest('.tab[data-tab]');
-  if (!tab) { tabClickCount = 0; return; }
+  if (!tab) { tabClickCount = 0; lastClickedTab = null; return; }
+  const tabId = tab.getAttribute('data-tab');
+  if (tabId !== lastClickedTab) { tabClickCount = 0; lastClickedTab = tabId; }
   tabClickCount++;
   clearTimeout(tabClickTimer);
-  tabClickTimer = setTimeout(() => { tabClickCount = 0; }, 1200);
+  tabClickTimer = setTimeout(() => { tabClickCount = 0; lastClickedTab = null; }, 1200);
   if (tabClickCount >= 3) {
     tabClickCount = 0;
-    document.body.classList.toggle('close-mode');
-    const isActive = document.body.classList.contains('close-mode');
-    const indicator = document.getElementById('unlock-indicator');
-    if (indicator) indicator.innerHTML = isActive ? '&#128275; Close mode' : '&#128274;';
-    // Toggle inline duplicate checkboxes
-    document.querySelectorAll('#dup-table .close-col').forEach(el => {
-      el.style.display = isActive ? 'inline' : 'none';
-    });
-    updateCloseFooter();
+    if (tabId === 'history') {
+      document.body.classList.toggle('revert-mode');
+      updateRevertFooter();
+    } else {
+      document.body.classList.toggle('close-mode');
+      const isActive = document.body.classList.contains('close-mode');
+      const indicator = document.getElementById('unlock-indicator');
+      if (indicator) indicator.innerHTML = isActive ? '&#128275; Close mode' : '&#128274;';
+      document.querySelectorAll('#dup-table .close-col').forEach(el => {
+        el.style.display = isActive ? 'inline' : 'none';
+      });
+      updateCloseFooter();
+    }
   }
 });
 
@@ -1275,7 +1308,66 @@ function copyCliCommand() {
   const json = JSON.stringify(manifest);
   const cmd = `cd ~/repos/work/AI/backlog-triage && python3 scripts/close_tickets.py --execute --stdin <<'EOF'\n${JSON.stringify(manifest, null, 2)}\nEOF`;
   navigator.clipboard.writeText(cmd).then(() => {
-    const btn = document.querySelector('.modal-confirm');
+    const btn = document.querySelector('#close-modal-overlay .modal-confirm');
+    const original = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.style.background = '#22c55e';
+    setTimeout(() => { btn.textContent = original; btn.style.background = ''; }, 2000);
+  });
+}
+
+// --- Revert mode functions ---
+function updateRevertFooter() {
+  const footer = document.getElementById('revert-footer');
+  if (!footer) return;
+  const cbs = document.querySelectorAll('.revert-cb:checked');
+  footer.classList.toggle('has-selection', cbs.length > 0);
+  footer.querySelector('.revert-count').textContent = cbs.length + ' ticket' + (cbs.length !== 1 ? 's' : '') + ' selected for revert';
+}
+
+function getRevertTickets() {
+  return [...document.querySelectorAll('.revert-cb:checked')].map(cb => ({
+    key: cb.dataset.key,
+    summary: cb.dataset.summary
+  }));
+}
+
+function showRevertModal() {
+  const selected = getRevertTickets();
+  if (!selected.length) return;
+  const overlay = document.getElementById('revert-modal-overlay');
+  const modal = overlay.querySelector('.close-modal');
+  let listHtml = `<ul class="close-modal-list">`;
+  selected.forEach(s => { listHtml += `<li><strong>${s.key}</strong> — ${s.summary}</li>`; });
+  listHtml += `</ul>`;
+  modal.innerHTML = `
+    <h3 style="color:#f59e0b;">Confirm Revert</h3>
+    <p>The following <strong>${selected.length}</strong> ticket(s) will be reverted:</p>
+    ${listHtml}
+    <p style="color:#9ca3af;font-size:13px;margin-top:12px;">For each ticket the script will:</p>
+    <ol style="color:#9ca3af;font-size:13px;padding-left:20px;">
+      <li>Look up previous status from changelog</li>
+      <li>Transition ticket back to that status</li>
+      <li>Remove <code>triage-closed-*</code> label</li>
+      <li>Add <code>triage-reverted</code> label</li>
+    </ol>
+    <p style="color:#9ca3af;font-size:13px;">Click <strong>Copy CLI cmd</strong> to copy the command to your clipboard, then paste into your terminal to execute.</p>
+    <div class="close-modal-actions">
+      <button class="modal-cancel" onclick="document.getElementById('revert-modal-overlay').classList.remove('visible')">Close</button>
+      <button class="modal-confirm" onclick="copyRevertCommand()">Copy CLI cmd</button>
+    </div>`;
+  overlay.classList.add('visible');
+}
+
+function copyRevertCommand() {
+  const selected = getRevertTickets();
+  const manifest = {
+    generated_at: new Date().toISOString(),
+    items: selected.map(s => ({ key: s.key }))
+  };
+  const cmd = `cd ~/repos/work/AI/backlog-triage && python3 scripts/revert_tickets.py --execute --stdin <<'EOF'\n${JSON.stringify(manifest, null, 2)}\nEOF`;
+  navigator.clipboard.writeText(cmd).then(() => {
+    const btn = document.querySelector('#revert-modal-overlay .modal-confirm');
     const original = btn.textContent;
     btn.textContent = 'Copied!';
     btn.style.background = '#22c55e';
