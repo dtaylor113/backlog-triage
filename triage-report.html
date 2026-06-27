@@ -150,7 +150,7 @@ th .resize-handle:hover, th .resize-handle.active { background: #60a5fa; }
 }
 .info-popup .close-btn:hover { color: #e5e7eb; }
 
-/* Close mode (hidden until triple-click unlock) */
+/* Close mode */
 .close-col { display: none; }
 body.close-mode .close-col { display: table-cell; }
 .close-col input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: #ef4444; }
@@ -196,7 +196,7 @@ body.close-mode .close-footer.has-selection { display: flex; }
 }
 body.close-mode .unlock-indicator { color: #ef4444; }
 
-/* Revert mode (hidden until triple-click on History tab) */
+/* Revert mode */
 .revert-col { display: none; }
 body.revert-mode .revert-col { display: table-cell; }
 .revert-col input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: #f59e0b; }
@@ -1127,7 +1127,7 @@ const INFO_CONTENT = {
 <ul style="margin:6px 0 0 16px;">
 <li>All closures apply a Jira label (<code>triage-closed-orphan</code>, <code>triage-closed-duplicate</code>, <code>triage-closed-obsolete</code>) and an appropriate resolution (Won\u2019t Do, Duplicate, or Obsolete).</li>
 <li>Nothing disappears silently \u2014 labels make triaged tickets easy to find and filter in Jira.</li>
-<li>Closures can be <strong>reverted</strong> from the Triage History tab (triple-click to unlock). The revert script restores the ticket\u2019s previous status and swaps the label to <code>triage-reverted</code>.</li>
+<li>Closures can be <strong>reverted</strong> from the Triage History tab. Activate revert mode to unlock checkboxes. The revert script restores the ticket\u2019s previous status and swaps the label to <code>triage-reverted</code>.</li>
 </ul>
 
 <h5>How to Use This Report</h5>
@@ -1135,8 +1135,8 @@ const INFO_CONTENT = {
 <li><strong>Sort</strong> \u2014 Click any column header to sort ascending/descending.</li>
 <li><strong>Filter</strong> \u2014 Use the search boxes to filter by key, summary, or type.</li>
 <li><strong>Info tips</strong> \u2014 Click (?) icons on column headers for scoring/methodology details.</li>
-<li><strong>Close mode</strong> \u2014 Triple-click any primary tab (except History) to reveal checkboxes. Select tickets, click "Close Selected", then copy the CLI command to execute.</li>
-<li><strong>Revert mode</strong> \u2014 Triple-click the "Triage History" tab to reveal revert checkboxes in the Closure Log.</li>
+<li><strong>Close mode</strong> \u2014 Activate close mode to reveal checkboxes. Select tickets, click \u201cClose Selected\u201d, then copy the CLI command to execute.</li>
+<li><strong>Revert mode</strong> \u2014 Activate revert mode to reveal revert checkboxes in the Closure Log.</li>
 </ul>
 
 <h5>Technical Details</h5>
@@ -1225,7 +1225,7 @@ document.addEventListener('click', (e) => {
     }
   }
 });
-// --- Triple-click unlock for close mode / revert mode ---
+// --- Activate close/revert modes ---
 let tabClickCount = 0;
 let tabClickTimer = null;
 let lastClickedTab = null;
