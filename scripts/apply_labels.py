@@ -11,7 +11,7 @@ priority_scores.json and applies the appropriate labels to tickets.
 
 Labels applied:
 - duplicate-candidate (from duplicate detection)
-- obsolete-candidate (from obsolete detection, high+medium confidence only)
+- obsolete-candidate (from obsolete detection, score >= 40)
 - suggested-priority-{blocker,critical,major,normal,minor} (from priority scoring)
 """
 
@@ -91,11 +91,11 @@ def collect_label_actions(batch_limit=None):
                                   f"(similarity: {pair['similarity']:.3f})",
                     })
 
-    # Obsolete candidates (high + medium confidence only)
+    # Obsolete candidates (score >= 40 — references deleted code)
     obsolete = load_json(BASE_DIR / "obsolete_candidates.json")
     if obsolete:
         for candidate in obsolete.get("candidates", []):
-            if candidate["confidence"] in ("high", "medium"):
+            if candidate["score"] >= 40:
                 actions.append({
                     "key": candidate["key"],
                     "label": "obsolete-candidate",

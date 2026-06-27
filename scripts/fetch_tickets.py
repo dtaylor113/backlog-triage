@@ -41,10 +41,17 @@ JQL_FROZEN = (
     "AND labels in (lifecycle-frozen)"
 )
 
+JQL_RECENTLY_CLOSED = (
+    f"project = {PROJECT} "
+    f"AND status in (Closed, Done) "
+    f"AND issuetype not in (Sub-task) "
+    f"AND resolved >= -90d"
+)
+
 FIELDS = [
     "key", "summary", "description", "labels", "components",
     "reporter", "assignee", "priority", "created", "updated", "comment",
-    "watches", "issuelinks", "issuetype", "status", "parent",
+    "watches", "issuelinks", "issuetype", "status", "resolution", "parent",
     "customfield_10020",  # Sprint
 ]
 
@@ -168,6 +175,7 @@ def normalize_issue(issue):
         "description_full_length": len(description_text),
         "type": fields.get("issuetype", {}).get("name", ""),
         "status": fields.get("status", {}).get("name", ""),
+        "resolution": (fields.get("resolution") or {}).get("name", ""),
         "priority": fields.get("priority", {}).get("name", ""),
         "labels": fields.get("labels", []),
         "components": [c.get("name", "") for c in fields.get("components", [])],
@@ -230,6 +238,52 @@ def fetch_parent_resolution_dates(parent_keys):
     return results
 
 
+def fetch_closing_authors(keys):
+    """Fetch the author and timestamp of the closing transition for each key."""
+    if not keys:
+        return {}
+    auth = get_auth()
+    results = {}
+    for key in keys:
+        try:
+            resp = requests.get(
+                f"https://{JIRA_INSTANCE}/rest/api/3/issue/{key}/changelog",
+                auth=auth,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            for entry in reversed(data.get("values", [])):
+                for item in entry.get("items", []):
+                    if item.get("field") == "status" and item.get("toString") in ("Closed", "Done"):
+                        results[key] = {
+                            "author": entry["author"].get("displayName", ""),
+                            "timestamp": entry.get("created", ""),
+                        }
+                        break
+                if key in results:
+                    break
+        except Exception:
+            results[key] = {"author": "", "timestamp": ""}
+    return results
+
+
+
+LIFECYCLE_BOT_ACCOUNT = "Joseph Caiani"
+
+
+def classify_closed_ticket(ticket):
+    """Classify a closed ticket as Triage, Lifecycle (Bot), Lifecycle, or Other."""
+    labels = ticket.get("labels", [])
+    triage_labels = [l for l in labels if l.startswith("triage-closed-")]
+    if triage_labels:
+        return "Triage"
+    if "lifecycle-stale" in labels:
+        if ticket.get("closed_by") == LIFECYCLE_BOT_ACCOUNT:
+            return "Lifecycle (Bot)"
+        return "Lifecycle"
+    return "Other"
+
+
 def main():
     print(f"Fetching open {PROJECT} tickets (excl. stale/frozen)...")
     print(f"JQL: {JQL}")
@@ -247,6 +301,24 @@ def main():
     print(f"JQL: {JQL_FROZEN}")
     frozen_tickets = fetch_all_tickets(JQL_FROZEN)
     print(f"Total frozen tickets fetched: {len(frozen_tickets)}")
+
+    print(f"\nFetching recently closed tickets (last 90 days)...")
+    print(f"JQL: {JQL_RECENTLY_CLOSED}")
+    recently_closed = fetch_all_tickets(JQL_RECENTLY_CLOSED)
+    print(f"Total recently closed tickets fetched: {len(recently_closed)}")
+
+    # Fetch closing authors from changelog
+    closed_keys = [t["key"] for t in recently_closed]
+    print(f"  Fetching closing authors for {len(closed_keys)} tickets...")
+    closing_authors = fetch_closing_authors(closed_keys)
+    print(f"  Got authors for {sum(1 for v in closing_authors.values() if v.get('author'))} tickets")
+
+    # Inject closed_by, close_timestamp, and category into recently closed tickets
+    for t in recently_closed:
+        info = closing_authors.get(t["key"], {})
+        t["closed_by"] = info.get("author", "") if info else ""
+        t["closed_at"] = info.get("timestamp", "") if info else ""
+        t["close_category"] = classify_closed_ticket(t)
 
     # Fetch actual resolution dates for closed parent issues
     all_tickets = tickets + stale_tickets + frozen_tickets
@@ -281,10 +353,14 @@ def main():
             "frozen_jql": JQL_FROZEN,
             "frozen_count": len(frozen_tickets),
             "frozen_tickets": frozen_tickets,
+            "recently_closed_jql": JQL_RECENTLY_CLOSED,
+            "recently_closed_count": len(recently_closed),
+            "recently_closed": recently_closed,
         }, f, indent=2)
 
     total = len(tickets) + len(stale_tickets) + len(frozen_tickets)
     print(f"\nTotal: {len(tickets)} open + {len(stale_tickets)} stale + {len(frozen_tickets)} frozen = {total}")
+    print(f"Recently closed (last 90 days): {len(recently_closed)}")
     print(f"Written to: {OUTPUT_FILE}")
 
 

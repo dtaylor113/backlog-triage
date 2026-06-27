@@ -91,9 +91,6 @@ th .resize-handle:hover, th .resize-handle.active { background: #60a5fa; }
   display: inline-block; padding: 2px 8px; border-radius: 3px;
   font-size: 11px; font-weight: 600; text-transform: uppercase;
 }
-.badge-high { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
-.badge-medium { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
-.badge-low { background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.4); }
 .badge-blocker { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
 .badge-critical { background: rgba(249, 115, 22, 0.2); color: #f97316; border: 1px solid rgba(249, 115, 22, 0.4); }
 .badge-major { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
@@ -332,9 +329,6 @@ function scoreColor(score) {
   return '#4b5563';
 }
 
-function confidenceBadge(conf) {
-  return `<span class="badge badge-${conf}">${conf}</span>`;
-}
 
 function priorityBadge(label) {
   const name = label.replace('suggested-priority-', '');
@@ -513,12 +507,11 @@ function renderObsoleteTab() {
   let html = `<div class="tab-content" id="tab-obsolete">`;
 
   html += `<h3>Obsolete Candidates (${candidates.length} total) <span class="info-btn" data-info="obsolete-total-info">?</span></h3>`;
-  html += `<div style="margin:8px 0 12px;color:#9ca3af;">High: ${D.obsolete.by_confidence.high} | Medium: ${D.obsolete.by_confidence.medium} | Low: ${D.obsolete.by_confidence.low}</div>`;
+  html += `<div style="margin:8px 0 12px;color:#9ca3af;">Tickets scoring ≥ 20 on the Obsolete Score — cross-references descriptions against the current codebase to find deleted routes, removed files, and renamed components.</div>`;
 
   // Filter
   html += `<div class="filter-bar">`;
   html += `<input type="text" id="obsolete-filter" placeholder="Filter by key or summary..." oninput="filterTable('obsolete-table','obsolete-filter')">`;
-  html += `<select id="obsolete-conf-filter" onchange="filterTable('obsolete-table','obsolete-filter')"><option value="">All Confidence</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>`;
   html += `</div>`;
 
   html += `<table id="obsolete-table"><thead><tr>`;
@@ -539,7 +532,7 @@ function renderObsoleteTab() {
   html += `</tr></thead><tbody>`;
 
   candidates.forEach(c => {
-    html += `<tr data-confidence="${c.confidence}">`;
+    html += `<tr>`;
     html += `<td class="close-col"><input type="checkbox" class="close-cb" data-key="${esc(c.key)}" onchange="updateCloseFooter()"></td>`;
     html += `<td>${esc(c.type)}</td>`;
     html += `<td class="nowrap">${jiraLink(c.key)}</td>`;
@@ -861,46 +854,28 @@ function renderLifecycleTable(tableId, tickets, {showEstClose = true, hideGenera
 function renderHistoryTab() {
   const closeLog = D.close_log || [];
   const metricsLog = D.metrics_log || [];
+  const recentlyClosed = D.recently_closed || [];
 
   let html = `<div class="tab-content" id="tab-history">`;
 
-  if (!closeLog.length && !metricsLog.length) {
-    html += `<p style="color:#9ca3af;margin:24px 0;">No triage history yet. Run the pipeline and close tickets to build history.</p>`;
-    html += `</div>`;
-    return html;
-  }
-
-  // --- Closures summary ---
-  html += `<h3>Tickets Closed via Triage</h3>`;
-
-  // Group closures by week and label
-  const byWeek = {};
-  const byLabel = {};
-  const byResolution = {};
-  closeLog.forEach(r => {
-    const date = r.date || '';
-    const weekStart = getWeekStart(date);
-    byWeek[weekStart] = byWeek[weekStart] || { orphan: 0, duplicate: 0, obsolete: 0, total: 0 };
-    byLabel[r.label] = (byLabel[r.label] || 0) + 1;
-    byResolution[r.resolution] = (byResolution[r.resolution] || 0) + 1;
-
-    if ((r.label || '').includes('orphan')) byWeek[weekStart].orphan++;
-    else if ((r.label || '').includes('duplicate')) byWeek[weekStart].duplicate++;
-    else if ((r.label || '').includes('obsolete')) byWeek[weekStart].obsolete++;
-    byWeek[weekStart].total++;
-  });
-
-  // Running total: starting backlog vs current
+  // --- Summary equation (always shown at top) ---
   const startingTotal = 929; // Baseline: 2026-06-26
   const currentTotal = (D.tickets || []).length + (D.stale_tickets || []).length + (D.frozen_tickets || []).length;
-  const totalClosed = closeLog.length;
-  const netReduction = startingTotal - currentTotal;
 
-  // Totals equation: Started At - orphan - duplicate - obsolete = Current Total
+  const byLabel = {};
+  closeLog.forEach(r => { byLabel[r.label] = (byLabel[r.label] || 0) + 1; });
   const orphanClosed = byLabel['triage-closed-orphan'] || 0;
   const dupClosed = byLabel['triage-closed-duplicate'] || 0;
   const obsClosed = byLabel['triage-closed-obsolete'] || 0;
+  const triageClosed = orphanClosed + dupClosed + obsClosed;
 
+  // Split non-triage closures into Lifecycle (Bot) vs Lifecycle vs Other using recently_closed data
+  const lifecycleBotClosed = recentlyClosed.filter(t => t.close_category === 'Lifecycle (Bot)' && (t.updated || '').slice(0,10) >= '2026-06-26').length;
+  const lifecycleClosed = recentlyClosed.filter(t => t.close_category === 'Lifecycle' && (t.updated || '').slice(0,10) >= '2026-06-26').length;
+  const totalNonTriage = startingTotal - triageClosed - currentTotal;
+  const otherClosed = Math.max(0, totalNonTriage - lifecycleBotClosed - lifecycleClosed);
+
+  html += `<h3>Closed Issues</h3>`;
   html += `<div style="display:flex;gap:12px;margin:12px 0 20px;flex-wrap:wrap;align-items:center;">`;
   html += `<div class="card card-sm"><div class="value">${startingTotal}</div><div class="label">Started At (6/26)</div></div>`;
   html += `<span class="card-operator">−</span>`;
@@ -909,65 +884,150 @@ function renderHistoryTab() {
   html += `<div class="card card-sm"><div class="value" style="color:#a78bfa;">${dupClosed}</div><div class="label">Duplicate</div></div>`;
   html += `<span class="card-operator">−</span>`;
   html += `<div class="card card-sm"><div class="value" style="color:#9ca3af;">${obsClosed}</div><div class="label">Obsolete</div></div>`;
+  html += `<span class="card-operator">−</span>`;
+  html += `<div class="card card-sm"><div class="value" style="color:#60a5fa;">${lifecycleBotClosed}</div><div class="label">Lifecycle (Bot)</div></div>`;
+  html += `<span class="card-operator">−</span>`;
+  html += `<div class="card card-sm"><div class="value" style="color:#38bdf8;">${lifecycleClosed}</div><div class="label">Lifecycle</div></div>`;
+  html += `<span class="card-operator">−</span>`;
+  html += `<div class="card card-sm"><div class="value" style="color:#64748b;">${otherClosed}</div><div class="label">Other</div></div>`;
   html += `<span class="card-operator">=</span>`;
   html += `<div class="card card-sm" style="border-color:#22c55e;"><div class="value">${currentTotal}</div><div class="label">Current Total</div></div>`;
   html += `</div>`;
 
-  // Bar chart by week
-  const weeks = Object.keys(byWeek).sort();
-  if (weeks.length) {
-    const maxTotal = Math.max(...weeks.map(w => byWeek[w].total));
+  // --- Sub-tabs: Triage | All Closed ---
+  html += `<div class="tab-bar" style="margin-top:12px;">`;
+  html += `<div class="tab active" data-subtab="history-triage">Triage (${closeLog.length})</div>`;
+  html += `<div class="tab" data-subtab="history-all">Closed within last 3 months (${recentlyClosed.length})</div>`;
+  html += `</div>`;
 
-    html += `<h3 style="margin-top:24px;">Closures by Week</h3>`;
-    html += `<div style="margin:12px 0;">`;
-    weeks.forEach(week => {
-      const w = byWeek[week];
-      const barMax = 300;
-      const orphanW = maxTotal ? Math.round((w.orphan / maxTotal) * barMax) : 0;
-      const dupW = maxTotal ? Math.round((w.duplicate / maxTotal) * barMax) : 0;
-      const obsW = maxTotal ? Math.round((w.obsolete / maxTotal) * barMax) : 0;
+  // === Triage sub-tab ===
+  html += `<div class="subtab-content active" id="subtab-history-triage">`;
 
-      html += `<div style="display:flex;align-items:center;gap:10px;margin:6px 0;">`;
-      html += `<span style="min-width:90px;font-size:12px;color:#9ca3af;">${week}</span>`;
-      html += `<div style="display:flex;height:20px;border-radius:3px;overflow:hidden;">`;
-      if (orphanW) html += `<div style="width:${orphanW}px;background:#f59e0b;" title="Orphaned: ${w.orphan}"></div>`;
-      if (dupW) html += `<div style="width:${dupW}px;background:#a78bfa;" title="Duplicate: ${w.duplicate}"></div>`;
-      if (obsW) html += `<div style="width:${obsW}px;background:#6b7280;" title="Obsolete: ${w.obsolete}"></div>`;
-      html += `</div>`;
-      html += `<span style="font-size:12px;color:#e5e7eb;font-weight:600;">${w.total}</span>`;
-      html += `</div>`;
+  if (!closeLog.length) {
+    html += `<p style="color:#9ca3af;margin:24px 0;">No triage closures yet.</p>`;
+  } else {
+    // Bar chart by week
+    const byWeek = {};
+    closeLog.forEach(r => {
+      const weekStart = getWeekStart(r.date || '');
+      byWeek[weekStart] = byWeek[weekStart] || { orphan: 0, duplicate: 0, obsolete: 0, total: 0 };
+      if ((r.label || '').includes('orphan')) byWeek[weekStart].orphan++;
+      else if ((r.label || '').includes('duplicate')) byWeek[weekStart].duplicate++;
+      else if ((r.label || '').includes('obsolete')) byWeek[weekStart].obsolete++;
+      byWeek[weekStart].total++;
     });
-    html += `</div>`;
 
-    // Legend
-    html += `<div style="display:flex;gap:16px;margin:8px 0 20px;font-size:12px;">`;
-    html += `<span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Orphaned</span>`;
-    html += `<span><span style="display:inline-block;width:12px;height:12px;background:#a78bfa;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Duplicate</span>`;
-    html += `<span><span style="display:inline-block;width:12px;height:12px;background:#6b7280;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Obsolete</span>`;
-    html += `</div>`;
+    const weeks = Object.keys(byWeek).sort();
+    if (weeks.length) {
+      const maxTotal = Math.max(...weeks.map(w => byWeek[w].total));
+
+      html += `<h3 style="margin-top:12px;">Closures by Week</h3>`;
+      html += `<div style="margin:12px 0;">`;
+      weeks.forEach(week => {
+        const w = byWeek[week];
+        const barMax = 300;
+        const orphanW = maxTotal ? Math.round((w.orphan / maxTotal) * barMax) : 0;
+        const dupW = maxTotal ? Math.round((w.duplicate / maxTotal) * barMax) : 0;
+        const obsW = maxTotal ? Math.round((w.obsolete / maxTotal) * barMax) : 0;
+
+        html += `<div style="display:flex;align-items:center;gap:10px;margin:6px 0;">`;
+        html += `<span style="min-width:90px;font-size:12px;color:#9ca3af;">${week}</span>`;
+        html += `<div style="display:flex;height:20px;border-radius:3px;overflow:hidden;">`;
+        if (orphanW) html += `<div style="width:${orphanW}px;background:#f59e0b;" title="Orphaned: ${w.orphan}"></div>`;
+        if (dupW) html += `<div style="width:${dupW}px;background:#a78bfa;" title="Duplicate: ${w.duplicate}"></div>`;
+        if (obsW) html += `<div style="width:${obsW}px;background:#6b7280;" title="Obsolete: ${w.obsolete}"></div>`;
+        html += `</div>`;
+        html += `<span style="font-size:12px;color:#e5e7eb;font-weight:600;">${w.total}</span>`;
+        html += `</div>`;
+      });
+      html += `</div>`;
+
+      // Legend
+      html += `<div style="display:flex;gap:16px;margin:8px 0 20px;font-size:12px;">`;
+      html += `<span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Orphaned</span>`;
+      html += `<span><span style="display:inline-block;width:12px;height:12px;background:#a78bfa;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Duplicate</span>`;
+      html += `<span><span style="display:inline-block;width:12px;height:12px;background:#6b7280;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Obsolete</span>`;
+      html += `</div>`;
+    }
+
+    // Closure detail table
+    html += `<h3 style="margin-top:24px;">Closure Log</h3>`;
+    html += `<table id="history-table"><thead><tr>`;
+    html += `<th class="revert-col" style="width:auto;font-size:12px;">Revert Triage?</th>`;
+    ['Date','Key','Summary','Resolution','Label','Reason'].forEach(h => {
+      html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
+    });
+    html += `</tr></thead><tbody>`;
+    closeLog.slice().reverse().forEach(r => {
+      html += `<tr>`;
+      html += `<td class="revert-col"><input type="checkbox" class="revert-cb" data-key="${esc(r.key)}" data-summary="${esc(r.summary || '')}" onchange="updateRevertFooter()"></td>`;
+      html += `<td class="nowrap">${esc(r.date)}</td>`;
+      html += `<td class="nowrap">${jiraLink(r.key)}</td>`;
+      html += `<td>${esc(r.summary || '')}</td>`;
+      html += `<td>${esc(r.resolution)}</td>`;
+      html += `<td><code style="font-size:11px;">${esc(r.label)}</code></td>`;
+      html += `<td>${esc(r.reason)}</td>`;
+      html += `</tr>`;
+    });
+    html += `</tbody></table>`;
   }
+  html += `</div>`;
 
-  // --- Closure detail table ---
-  html += `<h3 style="margin-top:24px;">Closure Log</h3>`;
-  html += `<table id="history-table"><thead><tr>`;
-  html += `<th class="revert-col" style="width:auto;font-size:12px;">Revert Triage?</th>`;
-  ['Date','Key','Summary','Resolution','Label','Reason'].forEach(h => {
-    html += `<th>${h}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
-  });
-  html += `</tr></thead><tbody>`;
-  closeLog.slice().reverse().forEach(r => {
-    html += `<tr>`;
-    html += `<td class="revert-col"><input type="checkbox" class="revert-cb" data-key="${esc(r.key)}" data-summary="${esc(r.summary || '')}" onchange="updateRevertFooter()"></td>`;
-    html += `<td class="nowrap">${esc(r.date)}</td>`;
-    html += `<td class="nowrap">${jiraLink(r.key)}</td>`;
-    html += `<td>${esc(r.summary || '')}</td>`;
-    html += `<td>${esc(r.resolution)}</td>`;
-    html += `<td><code style="font-size:11px;">${esc(r.label)}</code></td>`;
-    html += `<td>${esc(r.reason)}</td>`;
-    html += `</tr>`;
-  });
-  html += `</tbody></table>`;
+  // === All Closed sub-tab ===
+  html += `<div class="subtab-content" id="subtab-history-all">`;
+  if (!recentlyClosed.length) {
+    html += `<p style="color:#9ca3af;margin:24px 0;">No closed tickets found in the last 3 months.</p>`;
+  } else {
+    // Collect unique types and categories for filters
+    const closedTypes = [...new Set(recentlyClosed.map(t => t.type).filter(Boolean))].sort();
+    const closedCategories = [...new Set(recentlyClosed.map(t => t.close_category || 'Other'))].sort();
 
+    html += `<div style="margin:8px 0 12px;color:#9ca3af;">All tickets closed in the last 3 months (~90 days), sorted by resolution date (most recent first).</div>`;
+    html += `<div class="filter-bar" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">`;
+    html += `<input type="text" id="all-closed-filter" placeholder="Filter by key, summary, or closed by..." oninput="filterAllClosedTable()">`;
+    html += `<select id="all-closed-type-filter" onchange="filterAllClosedTable()" style="background:#1e293b;color:#e5e7eb;border:1px solid #374151;border-radius:4px;padding:6px 10px;font-size:13px;">`;
+    html += `<option value="">All Types</option>`;
+    closedTypes.forEach(type => { html += `<option value="${esc(type)}">${esc(type)}</option>`; });
+    html += `</select>`;
+    html += `<select id="all-closed-category-filter" onchange="filterAllClosedTable()" style="background:#1e293b;color:#e5e7eb;border:1px solid #374151;border-radius:4px;padding:6px 10px;font-size:13px;">`;
+    html += `<option value="">All Categories</option>`;
+    closedCategories.forEach(cat => { html += `<option value="${esc(cat)}">${esc(cat)}</option>`; });
+    html += `</select>`;
+    html += `</div>`;
+    html += `<table id="all-closed-table"><thead><tr>`;
+    ['Closed','Key','Summary','Type','Reporter','Closed By','Category','Resolution','Priority','Created'].forEach(h => {
+      const infoBtn = h === 'Category' ? `<span class="info-btn" data-info="category-info">?</span>` : '';
+      html += `<th>${h}${infoBtn}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
+    });
+    html += `</tr></thead><tbody>`;
+
+    const sorted = recentlyClosed.slice().sort((a, b) => {
+      const da = a.updated || a.created || '';
+      const db = b.updated || b.created || '';
+      return db.localeCompare(da);
+    });
+
+    sorted.forEach(t => {
+      const closedDate = (t.updated || '').slice(0, 10);
+      const category = t.close_category || 'Other';
+      const categoryColor = category === 'Triage' ? '#22c55e' : category.startsWith('Lifecycle') ? '#60a5fa' : '#64748b';
+      const reporter = (t.reporter_email || '').split('@')[0] || t.reporter_name || '';
+      html += `<tr data-type="${esc(t.type)}" data-category="${esc(category)}">`;
+      html += `<td class="nowrap">${closedDate}</td>`;
+      html += `<td class="nowrap">${jiraLink(t.key)}</td>`;
+      html += `<td>${esc(t.summary)}</td>`;
+      html += `<td>${esc(t.type)}</td>`;
+      html += `<td>${esc(reporter)}</td>`;
+      html += `<td>${esc(t.closed_by || '')}</td>`;
+      html += `<td style="color:${categoryColor};font-weight:600;">${category}</td>`;
+      html += `<td>${esc(t.resolution || '')}</td>`;
+      html += `<td>${esc(t.priority)}</td>`;
+      html += `<td class="nowrap">${(t.created || '').slice(0, 10)}</td>`;
+      html += `</tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+  html += `</div>`;
 
   html += `</div>`;
   return html;
@@ -1128,9 +1188,6 @@ function filterTable(tableId, inputId) {
   // Label filter (priorities)
   const labelFilter = document.getElementById('priority-label-filter');
   const labelVal = labelFilter ? labelFilter.value : '';
-  // Confidence filter (obsolete)
-  const confFilter = document.getElementById('obsolete-conf-filter');
-  const confVal = confFilter ? confFilter.value : '';
   // Duplicate type filter (check both sub-tab filters)
   const dupIssuesTypeFilter = document.getElementById('dup-issues-type-filter');
   const dupGenTypeFilter = document.getElementById('dup-gen-type-filter');
@@ -1148,15 +1205,28 @@ function filterTable(tableId, inputId) {
     if (visible && labelVal && row.dataset.label) {
       visible = row.dataset.label === labelVal;
     }
-    if (visible && confVal && row.dataset.confidence) {
-      visible = row.dataset.confidence === confVal;
-    }
     if (visible && dupTypeVal) {
       if (dupTypeVal === 'same-parent') {
         visible = row.dataset.sameParent === 'yes';
       }
     }
 
+    row.style.display = visible ? '' : 'none';
+  });
+}
+
+function filterAllClosedTable() {
+  const table = document.getElementById('all-closed-table');
+  if (!table) return;
+  const query = (document.getElementById('all-closed-filter')?.value || '').toLowerCase();
+  const typeVal = document.getElementById('all-closed-type-filter')?.value || '';
+  const catVal = document.getElementById('all-closed-category-filter')?.value || '';
+
+  table.querySelectorAll('tbody tr').forEach(row => {
+    const text = row.textContent.toLowerCase();
+    let visible = !query || text.includes(query);
+    if (visible && typeVal) visible = (row.dataset.type || '') === typeVal;
+    if (visible && catVal) visible = (row.dataset.category || '') === catVal;
     row.style.display = visible ? '' : 'none';
   });
 }
@@ -1197,13 +1267,6 @@ const INFO_CONTENT = {
 <li><strong>Blocking external team</strong> \u2014 "blocks" link to a non-OCMUI ticket</li>
 </ul>`,
 
-  'confidence-info': `<h4>Obsolete Confidence</h4>
-<p>How likely a ticket is obsolete, based on these tiers:</p>
-<ul style="margin:6px 0 0 16px;">
-<li><strong>High</strong> \u2014 Ticket references a component, route, or file that has been deleted from <code>src/</code></li>
-<li><strong>Medium</strong> \u2014 Ticket references a refactored wizard/component (name changed, fields removed)</li>
-<li><strong>Low</strong> \u2014 Ticket is 18+ months old with no activity in 12+ months, and/or reporter is no longer on the team</li>
-</ul>`,
 
   'est-close-info': `<h4>Estimated Close Date</h4>
 <p>Approximation of when the lifecycle bot will auto-close this ticket.</p>
@@ -1222,6 +1285,16 @@ const INFO_CONTENT = {
 <li>Gray — more than 20 days remaining</li>
 </ul>
 <p style="margin-top:8px;color:#9ca3af;font-size:0.85em;">To rescue a ticket: remove the <code>lifecycle-stale</code> label or add <code>lifecycle-frozen</code>. Any activity resets the timer.</p>`,
+
+  'category-info': `<h4>Category</h4>
+<p>How each closed ticket is classified:</p>
+<ul style="margin:6px 0 0 16px;">
+<li><strong style="color:#22c55e;">Triage</strong> — Ticket has a <span class="jira-label">triage-closed-orphan</span>, <span class="jira-label">triage-closed-duplicate</span>, or <span class="jira-label">triage-closed-obsolete</span> label. Closed via this backlog triage process.</li>
+<li><strong style="color:#60a5fa;">Lifecycle (Bot)</strong> — Ticket has <span class="jira-label">lifecycle-stale</span> label and was closed by the lifecycle automation account. The bot adds the stale label and later auto-closes after ~90 days.</li>
+<li><strong style="color:#38bdf8;">Lifecycle</strong> — Ticket has <span class="jira-label">lifecycle-stale</span> label but was closed manually by a team member (not the bot). Human responded to the stale label and closed it with a reason.</li>
+<li><strong style="color:#64748b;">Other</strong> — No triage or lifecycle labels. Closed manually by a team member through normal workflow (completed work, won\u2019t do, etc.).</li>
+</ul>
+<p style="margin-top:10px;color:#9ca3af;font-size:0.85em;">The "Closed By" column shows the person who performed the closing transition, determined from the ticket's changelog.</p>`,
 
   'obsolete-total-info': `<h4>How is this count determined?</h4>
 <p>A ticket appears in this list when its <strong>Obsolete Score reaches 20+</strong>. The score is computed by cross-referencing each ticket against the current codebase and team data:</p>
@@ -1257,7 +1330,7 @@ const INFO_CONTENT = {
 <li><strong>Obsolete Candidates</strong> \u2014 Cross-references each ticket\u2019s description against the current codebase (<code>git ls-files</code> + ripgrep). Tickets referencing deleted routes, removed components, or refactored files score high.</li>
 <li><strong>Possible Duplicates</strong> \u2014 Detects cases where Jira automation ran multiple times on the same epic, creating duplicate generated child tasks.</li>
 <li><strong>Orphaned Issues</strong> \u2014 Open children whose parent epic is already Closed. These will never be worked on and should be closed or re-parented.</li>
-<li><strong>Close History</strong> \u2014 Running log of all closures made via this process, with weekly bar charts and a revert mechanism.</li>
+<li><strong>Close History</strong> \u2014 Two sub-tabs: <em>Triage</em> shows closures made via this triage process (with weekly bar charts and a revert mechanism); <em>All Closed</em> shows every ticket closed in the last 3 months with a "Category" column classifying each as Triage, Lifecycle (Bot), Lifecycle, or Other.</li>
 </ul>
 
 <h5>How to Use This Report</h5>
@@ -1329,7 +1402,7 @@ const INFO_CONTENT = {
 <h5>Close / Revert Closures</h5>
 <ul style="margin:6px 0 0 16px;">
 <li><strong>Close mode</strong> \u2014 Triple-click the \u201cObsolete Candidates\u201d, \u201cPossible Duplicates\u201d, or \u201cOrphaned Issues\u201d primary tab. Checkboxes appear in those tables.</li>
-<li><strong>Revert mode</strong> \u2014 Triple-click the \u201cClose History\u201d primary tab. Checkboxes appear in the Closure Log table.</li>
+<li><strong>Revert mode</strong> \u2014 Triple-click the \u201cTriage\u201d sub-tab inside Close History. Checkboxes appear in the Closure Log table.</li>
 </ul>
 
 <p style="margin-top:14px;color:#9ca3af;font-size:11px;">Triple-click = 3 clicks within 1.2 seconds on the same element. Clicking the same trigger again deactivates the mode and hides checkboxes.</p>`,
@@ -1426,7 +1499,7 @@ document.addEventListener('click', (e) => {
   tabClickTimer = setTimeout(() => { tabClickCount = 0; lastClickedTab = null; }, 1200);
   if (tabClickCount >= 3) {
     tabClickCount = 0;
-    if (tabId === 'history') {
+    if (tabId === 'history-triage') {
       document.body.classList.toggle('revert-mode');
       updateRevertFooter();
     } else if (tabId === 'priorities') {
@@ -1438,7 +1511,7 @@ document.addEventListener('click', (e) => {
     } else if (tabId === 'lifecycle-frozen') {
       document.body.classList.toggle('unfreeze-mode');
       updateFreezeFooter();
-    } else {
+    } else if (tabId !== 'history' && tabId !== 'history-all') {
       document.body.classList.toggle('close-mode');
       const isActive = document.body.classList.contains('close-mode');
       document.querySelectorAll('#dup-table .close-col').forEach(el => {

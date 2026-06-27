@@ -134,7 +134,6 @@ def check_references_against_codebase(refs, src_components, src_dirs, src_files,
                 "type": "route",
                 "reference": route,
                 "status": "not_found",
-                "confidence": "high",
             })
 
     for filepath in refs["files"]:
@@ -145,7 +144,6 @@ def check_references_against_codebase(refs, src_components, src_dirs, src_files,
                 "type": "file",
                 "reference": filepath,
                 "status": "not_found",
-                "confidence": "high",
             })
 
     for component in refs["components"]:
@@ -156,7 +154,6 @@ def check_references_against_codebase(refs, src_components, src_dirs, src_files,
                 "type": "component",
                 "reference": component,
                 "status": "not_found",
-                "confidence": "medium",
             })
 
     return findings
@@ -195,7 +192,6 @@ def main():
 
     for ticket in tickets:
         reasons = []
-        confidence = "low"
         score = 0
 
         refs = extract_references(ticket["description"])
@@ -204,23 +200,20 @@ def main():
         )
 
         if codebase_findings:
-            high_findings = [f for f in codebase_findings if f["confidence"] == "high"]
-            medium_findings = [f for f in codebase_findings if f["confidence"] == "medium"]
+            deleted_findings = [f for f in codebase_findings if f["type"] in ("route", "file")]
+            component_findings = [f for f in codebase_findings if f["type"] == "component"]
 
-            if high_findings:
-                confidence = "high"
+            if deleted_findings:
                 score += 40
                 reasons.append(
-                    f"References {len(high_findings)} deleted element(s): "
-                    + ", ".join(f["reference"] for f in high_findings[:3])
+                    f"References {len(deleted_findings)} deleted element(s): "
+                    + ", ".join(f["reference"] for f in deleted_findings[:3])
                 )
-            if medium_findings:
-                if confidence != "high":
-                    confidence = "medium"
+            if component_findings:
                 score += 20
                 reasons.append(
-                    f"References {len(medium_findings)} possibly-removed component(s): "
-                    + ", ".join(f["reference"] for f in medium_findings[:3])
+                    f"References {len(component_findings)} possibly-removed component(s): "
+                    + ", ".join(f["reference"] for f in component_findings[:3])
                 )
 
         age_months = compute_age_months(ticket["created"])
@@ -239,8 +232,6 @@ def main():
             score += 10
             reasons.append(f"Reporter ({ticket['reporter_email']}) not on current team")
 
-        # Parent-is-closed signal removed — handled by Orphaned Issues tab
-
         if score >= 20:
             candidates.append({
                 "key": ticket["key"],
@@ -251,7 +242,6 @@ def main():
                 "updated": ticket["updated"],
                 "age_months": round(age_months, 1),
                 "inactivity_months": round(inactivity_months, 1),
-                "confidence": confidence,
                 "score": score,
                 "reasons": reasons,
                 "codebase_findings": codebase_findings,
@@ -260,31 +250,25 @@ def main():
                 "parent_status": ticket["parent_status"],
             })
 
-    candidates.sort(key=lambda c: (-{"high": 3, "medium": 2, "low": 1}[c["confidence"]], -c["score"]))
+    candidates.sort(key=lambda c: -c["score"])
 
     output = {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "total_tickets_analyzed": len(tickets),
         "obsolete_candidates_found": len(candidates),
-        "by_confidence": {
-            "high": len([c for c in candidates if c["confidence"] == "high"]),
-            "medium": len([c for c in candidates if c["confidence"] == "medium"]),
-            "low": len([c for c in candidates if c["confidence"] == "low"]),
-        },
         "candidates": candidates,
     }
 
     with open(OUTPUT_FILE, "w") as f:
         json.dump(output, f, indent=2)
     print(f"\nResults written to: {OUTPUT_FILE}")
-    print(f"  High confidence: {output['by_confidence']['high']}")
-    print(f"  Medium confidence: {output['by_confidence']['medium']}")
-    print(f"  Low confidence: {output['by_confidence']['low']}")
+    print(f"  Score >= 40: {sum(1 for c in candidates if c['score'] >= 40)}")
+    print(f"  Score 20-39: {sum(1 for c in candidates if 20 <= c['score'] < 40)}")
 
     if candidates:
         print(f"\nTop 10 obsolete candidates:")
         for c in candidates[:10]:
-            print(f"  [{c['confidence'].upper()}] {c['key']}: {c['summary'][:60]}")
+            print(f"  [{c['score']}] {c['key']}: {c['summary'][:60]}")
             for r in c["reasons"]:
                 print(f"    - {r}")
             print()

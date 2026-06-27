@@ -69,61 +69,23 @@ def section_obsolete(data):
     if not data or not data.get("candidates"):
         return "## Obsolete Candidates\n\nNo obsolete candidates found (or analysis not yet run).\n"
 
-    by_conf = data["by_confidence"]
     lines = [
         "## Obsolete Candidates",
         "",
-        f"**{data['obsolete_candidates_found']} candidates** found "
-        f"(High: {by_conf['high']}, Medium: {by_conf['medium']}, Low: {by_conf['low']})",
+        f"**{data['obsolete_candidates_found']} candidates** found (score ≥ 20)",
         "",
-        "### High Confidence",
-        "",
+        "| Ticket | Summary | Score | Age (mo) | Inactive (mo) | Reasons |",
+        "|--------|---------|:-----:|:--------:|:------------:|---------|",
     ]
 
-    high = [c for c in data["candidates"] if c["confidence"] == "high"]
-    medium = [c for c in data["candidates"] if c["confidence"] == "medium"]
-    low = [c for c in data["candidates"] if c["confidence"] == "low"]
-
-    if high:
-        lines.append("| Ticket | Summary | Age (mo) | Inactive (mo) | Reasons |")
-        lines.append("|--------|---------|:--------:|:------------:|---------|")
-        for c in high[:30]:
-            link = f"[{c['key']}]({JIRA_BASE}/{c['key']})"
-            reasons = "; ".join(c["reasons"][:2])
-            lines.append(
-                f"| {link} | {c['summary'][:50]} | {c['age_months']:.0f} | "
-                f"{c['inactivity_months']:.0f} | {reasons} |"
-            )
-        lines.append("")
-    else:
-        lines.append("None found.\n")
-
-    lines.append("### Medium Confidence\n")
-    if medium:
-        lines.append("| Ticket | Summary | Age (mo) | Reasons |")
-        lines.append("|--------|---------|:--------:|---------|")
-        for c in medium[:30]:
-            link = f"[{c['key']}]({JIRA_BASE}/{c['key']})"
-            reasons = "; ".join(c["reasons"][:2])
-            lines.append(f"| {link} | {c['summary'][:50]} | {c['age_months']:.0f} | {reasons} |")
-        lines.append("")
-    else:
-        lines.append("None found.\n")
-
-    lines.append("### Low Confidence\n")
-    if low:
-        lines.append(f"{len(low)} tickets flagged (age + inactivity only). Showing top 20:\n")
-        lines.append("| Ticket | Summary | Age (mo) | Inactive (mo) |")
-        lines.append("|--------|---------|:--------:|:------------:|")
-        for c in low[:20]:
-            link = f"[{c['key']}]({JIRA_BASE}/{c['key']})"
-            lines.append(
-                f"| {link} | {c['summary'][:50]} | {c['age_months']:.0f} | "
-                f"{c['inactivity_months']:.0f} |"
-            )
-        lines.append("")
-    else:
-        lines.append("None found.\n")
+    for c in data["candidates"][:50]:
+        link = f"[{c['key']}]({JIRA_BASE}/{c['key']})"
+        reasons = "; ".join(c["reasons"][:2])
+        lines.append(
+            f"| {link} | {c['summary'][:50]} | {c['score']} | {c['age_months']:.0f} | "
+            f"{c['inactivity_months']:.0f} | {reasons} |"
+        )
+    lines.append("")
 
     return "\n".join(lines)
 

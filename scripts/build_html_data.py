@@ -92,6 +92,7 @@ def main():
     all_tickets = tickets_data["tickets"] if tickets_data else []
     stale_tickets = tickets_data.get("stale_tickets", []) if tickets_data else []
     frozen_tickets = tickets_data.get("frozen_tickets", []) if tickets_data else []
+    recently_closed = tickets_data.get("recently_closed", []) if tickets_data else []
 
     # Compute metrics
     epic_count = sum(1 for t in all_tickets if t.get("type") == "Epic")
@@ -138,6 +139,7 @@ def main():
         "tickets": all_tickets,
         "stale_tickets": stale_tickets,
         "frozen_tickets": frozen_tickets,
+        "recently_closed": recently_closed,
         "close_log": close_log,
         "metrics_log": metrics_log,
     }
