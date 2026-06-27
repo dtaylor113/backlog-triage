@@ -30,7 +30,8 @@ JQL_STALE = (
     f"project = {PROJECT} "
     "AND status not in (Closed, Done) "
     "AND issuetype not in (Sub-task) "
-    "AND labels in (lifecycle-stale)"
+    "AND labels in (lifecycle-stale) "
+    "AND labels not in (lifecycle-frozen)"
 )
 
 JQL_FROZEN = (
