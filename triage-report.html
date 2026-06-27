@@ -297,7 +297,7 @@ function render() {
   html += `<div class="tab" data-tab="duplicates">Possible Duplicates (${dupTicketCount})</div>`;
   html += `<div class="tab" data-tab="cleanup">Orphaned Issues (${orphanedCount})</div>`;
   const triageClosed = (D.close_log || []).length;
-  html += `<div class="tab" data-tab="history">Triage History (<span style="color:#22c55e;">&#8595;</span> ${triageClosed})</div>`;
+  html += `<div class="tab" data-tab="history">Close History (<span style="color:#22c55e;">&#8595;</span> ${triageClosed})</div>`;
   html += `</div>`;
 
   html += renderPrioritiesTab();
@@ -1120,7 +1120,7 @@ const INFO_CONTENT = {
 <li><strong>Obsolete Candidates</strong> \u2014 Cross-references each ticket\u2019s description against the current codebase (<code>git ls-files</code> + ripgrep). Tickets referencing deleted routes, removed components, or refactored files score high.</li>
 <li><strong>Possible Duplicates</strong> \u2014 Detects cases where Jira automation ran multiple times on the same epic, creating duplicate generated child tasks.</li>
 <li><strong>Orphaned Issues</strong> \u2014 Open children whose parent epic is already Closed. These will never be worked on and should be closed or re-parented.</li>
-<li><strong>Triage History</strong> \u2014 Running log of all closures made via this process, with weekly bar charts and a revert mechanism.</li>
+<li><strong>Close History</strong> \u2014 Running log of all closures made via this process, with weekly bar charts and a revert mechanism.</li>
 </ul>
 
 <h5>How to Use This Report</h5>
@@ -1153,7 +1153,7 @@ const INFO_CONTENT = {
 <ul style="margin:6px 0 0 16px;">
 <li><strong>Close mode</strong> \u2014 Activate close mode to reveal checkboxes in the Obsolete, Duplicates, and Orphaned tabs. Select tickets, click \u201cClose Selected\u201d, review the confirmation dialog, then copy the CLI command to execute in your terminal.</li>
 <li><strong>Closures apply</strong> a Jira label (<code>triage-closed-orphan</code>, <code>triage-closed-duplicate</code>, or <code>triage-closed-obsolete</code>) and set the appropriate resolution (Won\u2019t Do, Duplicate, or Obsolete). Nothing disappears silently.</li>
-<li><strong>Revert mode</strong> \u2014 Activate revert mode in the Triage History tab to reveal checkboxes in the Closure Log. Select tickets to revert, review the confirmation, and copy the CLI command.</li>
+<li><strong>Revert mode</strong> \u2014 Activate revert mode in the Close History tab to reveal checkboxes in the Closure Log. Select tickets to revert, review the confirmation, and copy the CLI command.</li>
 <li><strong>Revert restores</strong> the ticket\u2019s previous status (looked up from the Jira changelog), removes the <code>triage-closed-*</code> label, and adds <code>triage-reverted</code>.</li>
 </ul>`,
 };
