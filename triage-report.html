@@ -429,9 +429,12 @@ function renderPrioritiesTab() {
     {name: 'Last Updated'},
     {name: 'Created'},
   ];
-  priorityHeaders.forEach(h => {
+  priorityHeaders.forEach((h, idx) => {
     const infoBtn = h.info ? `<span class="info-btn" data-info="${h.info}">?</span>` : '';
     html += `<th>${h.name}${infoBtn}<span class="sort-indicator">\u21C5</span><div class="resize-handle"></div></th>`;
+    if (h.name === 'Suggested') {
+      html += `<th class="priority-revert-col">Restore<div class="resize-handle"></div></th>`;
+    }
   });
   html += `</tr></thead><tbody>`;
 
@@ -466,6 +469,12 @@ function renderPrioritiesTab() {
     html += `<td>${esc(s.current_priority)}</td>`;
     html += `<td class="nowrap"><span class="score-bar" style="width:${barWidth}px;background:${color};"></span> ${s.score}</td>`;
     html += `<td>${priorityBadge(s.suggested_label)}</td>`;
+    if (hasAccepted) {
+      const origPriorityDisplay = origLabel.replace('triage-original-priority-', '');
+      html += `<td class="priority-revert-col"><span class="badge badge-${origPriorityDisplay}">${origPriorityDisplay}</span></td>`;
+    } else {
+      html += `<td class="priority-revert-col"></td>`;
+    }
     html += `<td>${s.auto_escalated ? '<span class="badge badge-escalated">escalated</span>' : ''}</td>`;
     html += `<td>${esc(s.reporter_email.split('@')[0] || s.reporter_name || '')}</td>`;
     html += `<td>${s.comment_count}</td>`;
