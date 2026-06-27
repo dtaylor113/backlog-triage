@@ -132,8 +132,17 @@ th .resize-handle:hover, th .resize-handle.active { background: #60a5fa; }
   color: #e5e7eb; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
 .info-popup.visible { display: block; }
+.info-popup.info-popup-lg { max-width: 640px; max-height: 75vh; overflow-y: auto; }
 .info-popup h4 { color: #93c5fd; margin-bottom: 8px; font-size: 13px; }
+.info-popup h5 { color: #60a5fa; margin: 14px 0 6px; font-size: 12px; border-bottom: 1px solid #374151; padding-bottom: 4px; }
 .info-popup table { margin: 8px 0; font-size: 11px; }
+.info-btn-lg {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%; font-size: 13px; font-weight: 700;
+  background: rgba(96, 165, 250, 0.2); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.4);
+  cursor: pointer; margin-left: 10px; vertical-align: middle;
+}
+.info-btn-lg:hover { background: rgba(96, 165, 250, 0.35); }
 .info-popup th, .info-popup td { padding: 3px 8px; border-color: #374151; }
 .info-popup .close-btn {
   position: absolute; top: 8px; right: 12px; cursor: pointer;
@@ -250,7 +259,7 @@ function render() {
   const app = document.getElementById('app');
   let html = '';
 
-  html += `<h1>OCMUI Backlog Triage Report <span class="unlock-indicator" id="unlock-indicator">&#128274;</span></h1>`;
+  html += `<h1>OCMUI Backlog Triage Report <span class="info-btn-lg" data-info="main-overview">?</span><span class="unlock-indicator" id="unlock-indicator">&#128274;</span></h1>`;
   html += `<div class="meta">Generated: ${new Date(D.meta.generated_at).toLocaleString()}</div>`;
 
 
@@ -1099,6 +1108,47 @@ const INFO_CONTENT = {
 </tbody></table>
 <p>Threshold: score \u2265 20 to appear as a candidate.</p>
 <p style="margin-top:8px;color:#9ca3af;font-size:0.85em;">Note: "Parent is Closed" is handled separately in the Orphaned Issues tab.</p>`,
+
+  'main-overview': `<h4>About This Report</h4>
+<p>The goal is twofold: <strong>surface the tickets that deserve attention</strong>, and <strong>systematically close the ones that no longer do</strong>.</p>
+<p style="margin-top:10px;">This AI-assisted tool analyzes the OCMUI Jira backlog (~930 tickets at baseline) and produces this interactive dashboard. It runs weekly to track progress and keep the backlog healthy.</p>
+
+<h5>What Each Tab Does</h5>
+<ul style="margin:6px 0 0 16px;">
+<li><strong>Priority Scoring</strong> \u2014 Every ticket gets a computed score (0\u2013100) based on reporter source, comment activity, age, watchers, linked epics, and more. Compares computed vs. current Jira priority, and auto-escalates tickets with clear urgency signals (customer cases, SLA dates, external blockers).</li>
+<li><strong>Lifecycle</strong> \u2014 Tracks tickets marked <code>lifecycle-stale</code> that will be auto-closed by the Jira lifecycle bot within ~90 days. Shows estimated close dates so you can rescue tickets that still matter.</li>
+<li><strong>Obsolete Candidates</strong> \u2014 Cross-references each ticket\u2019s description against the current codebase (<code>git ls-files</code> + ripgrep). Tickets referencing deleted routes, removed components, or refactored files score high.</li>
+<li><strong>Possible Duplicates</strong> \u2014 Detects cases where Jira automation ran multiple times on the same epic, creating duplicate generated child tasks.</li>
+<li><strong>Orphaned Issues</strong> \u2014 Open children whose parent epic is already Closed. These will never be worked on and should be closed or re-parented.</li>
+<li><strong>Triage History</strong> \u2014 Running log of all closures made via this process, with weekly bar charts and a revert mechanism.</li>
+</ul>
+
+<h5>Triage & Closure Process</h5>
+<ul style="margin:6px 0 0 16px;">
+<li>All closures apply a Jira label (<code>triage-closed-orphan</code>, <code>triage-closed-duplicate</code>, <code>triage-closed-obsolete</code>) and an appropriate resolution (Won\u2019t Do, Duplicate, or Obsolete).</li>
+<li>Nothing disappears silently \u2014 labels make triaged tickets easy to find and filter in Jira.</li>
+<li>Closures can be <strong>reverted</strong> from the Triage History tab (triple-click to unlock). The revert script restores the ticket\u2019s previous status and swaps the label to <code>triage-reverted</code>.</li>
+</ul>
+
+<h5>How to Use This Report</h5>
+<ul style="margin:6px 0 0 16px;">
+<li><strong>Sort</strong> \u2014 Click any column header to sort ascending/descending.</li>
+<li><strong>Filter</strong> \u2014 Use the search boxes to filter by key, summary, or type.</li>
+<li><strong>Info tips</strong> \u2014 Click (?) icons on column headers for scoring/methodology details.</li>
+<li><strong>Close mode</strong> \u2014 Triple-click any primary tab (except History) to reveal checkboxes. Select tickets, click "Close Selected", then copy the CLI command to execute.</li>
+<li><strong>Revert mode</strong> \u2014 Triple-click the "Triage History" tab to reveal revert checkboxes in the Closure Log.</li>
+</ul>
+
+<h5>Technical Details</h5>
+<ul style="margin:6px 0 0 16px;">
+<li><strong>Data source</strong> \u2014 Jira Cloud REST API v3 (paginated search, changelogs, transitions)</li>
+<li><strong>Obsolete detection</strong> \u2014 <code>git ls-files</code> + ripgrep to verify file/route existence</li>
+<li><strong>Priority scoring</strong> \u2014 Weighted formula across 10+ signals, normalized to 0\u2013100</li>
+<li><strong>Duplicate detection</strong> \u2014 Groups generated children by parent and flags duplicate summaries</li>
+<li><strong>Pipeline</strong> \u2014 7 Python scripts run sequentially: fetch \u2192 detect duplicates \u2192 detect obsolete \u2192 score priorities \u2192 report \u2192 build data \u2192 build standalone</li>
+<li><strong>Output</strong> \u2014 Single self-contained HTML file (no server required) with embedded JSON data</li>
+</ul>
+<p style="margin-top:10px;color:#9ca3af;font-size:0.85em;">Source: <a href="https://github.com/dtaylor113/backlog-triage" style="color:#60a5fa;" target="_blank">github.com/dtaylor113/backlog-triage</a></p>`,
 };
 
 document.addEventListener('click', (e) => {
@@ -1118,11 +1168,18 @@ document.addEventListener('click', (e) => {
       document.body.appendChild(popup);
     }
     const key = btn.dataset.info;
+    const isLarge = key === 'main-overview';
+    popup.classList.toggle('info-popup-lg', isLarge);
     popup.dataset.source = key;
     popup.innerHTML = `<span class="close-btn">\u00D7</span>${INFO_CONTENT[key] || ''}`;
     const rect = btn.getBoundingClientRect();
-    popup.style.top = (rect.bottom + 8) + 'px';
-    popup.style.left = Math.min(rect.left, window.innerWidth - 440) + 'px';
+    if (isLarge) {
+      popup.style.top = '60px';
+      popup.style.left = Math.max(20, (window.innerWidth - 660) / 2) + 'px';
+    } else {
+      popup.style.top = (rect.bottom + 8) + 'px';
+      popup.style.left = Math.min(rect.left, window.innerWidth - 440) + 'px';
+    }
     popup.classList.add('visible');
 
     popup.querySelector('.close-btn').addEventListener('click', () => popup.classList.remove('visible'));
