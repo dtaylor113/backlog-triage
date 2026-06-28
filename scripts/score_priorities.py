@@ -172,8 +172,9 @@ def score_security(ticket):
     """CVE/security vulnerabilities get +35."""
     summary = (ticket.get("summary") or "").upper()
     labels = [l.lower() for l in ticket.get("labels", [])]
+    ticket_type = (ticket.get("type") or "").lower()
 
-    if "CVE-" in summary or "cve" in labels or "security" in labels:
+    if "CVE-" in summary or "cve" in labels or "security" in labels or ticket_type == "vulnerability":
         return 35
     return 0
 
