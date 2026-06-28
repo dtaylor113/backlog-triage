@@ -17,7 +17,7 @@ CLOSE_LOG_FILE = BASE_DIR / "close-log.csv"
 
 LOG_HEADERS = [
     "date", "open", "stale", "frozen", "epics", "sprint",
-    "orphaned", "duplicates", "escalated",
+    "orphaned", "duplicates",
 ]
 
 
@@ -100,7 +100,6 @@ def main():
     dup_count = 0
     if duplicates:
         dup_count = duplicates.get("duplicate_pairs_found", 0)
-    escalated_count = priorities.get("auto_escalated_count", 0) if priorities else 0
 
     # Load previous for deltas
     prev = load_previous_log()
@@ -110,7 +109,6 @@ def main():
         current = {
             "open": len(all_tickets), "stale": len(stale_tickets),
             "frozen": len(frozen_tickets), "orphaned": orphaned_count,
-            "escalated": escalated_count,
         }
         for k in current:
             prev_val = int(prev.get(k, 0))
@@ -162,7 +160,6 @@ def main():
         "sprint": sprint_count,
         "orphaned": orphaned_count,
         "duplicates": dup_count,
-        "escalated": escalated_count,
     }
     append_log(metrics)
 

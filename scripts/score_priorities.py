@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Score OCMUI Jira tickets using the priority model.
 
-Scoring model (0-100 base, can exceed with auto-escalation):
+Scoring model (0-100):
 - Reporter source: External=+25, QE=+10, Dev=+0
 - Comment count: 5=+8, 6-10=+12, 10+=+15
 - Jira Priority field: Blocker=20, Critical=16, Major=12, Normal=6, Minor=2
@@ -10,15 +10,12 @@ Scoring model (0-100 base, can exceed with auto-escalation):
 - Customer-facing (bug visible to end-users): +10
 - Watchers count: >3 = +5
 - Lifecycle-frozen label: +8 (deliberately preserved from auto-deletion)
-
-Auto-escalation (floor = 70):
-- Linked to Salesforce/support case
-- Has Due date within 2 sprints (~6 weeks)
-- Blocks another team's work
+- CVE/Security vulnerability: +35
+- Linked to customer escalation/support case: +25
+- Blocks another team's work: +20
 
 Bonus modifiers:
 - Regression recency: +5 (bug <3 months old)
-- Sprint bounce: -5 per bounce (max -15)
 """
 
 import json
@@ -112,6 +109,8 @@ def score_comments(ticket):
 
 def score_priority_field(ticket):
     priority = ticket.get("priority", "Normal")
+    if priority == "Undefined":
+        return 0
     return PRIORITY_WEIGHTS.get(priority, 6)
 
 
@@ -169,24 +168,36 @@ def score_lifecycle_frozen(ticket):
     return 0
 
 
-def check_auto_escalation(ticket):
-    """Check for signals that auto-escalate to Critical+ (floor=70)."""
-    reasons = []
-    links = ticket.get("links", [])
+def score_security(ticket):
+    """CVE/security vulnerabilities get +35."""
+    summary = (ticket.get("summary") or "").upper()
+    labels = [l.lower() for l in ticket.get("labels", [])]
 
+    if "CVE-" in summary or "cve" in labels or "security" in labels:
+        return 35
+    return 0
+
+
+def score_escalation_links(ticket):
+    """Linked to customer escalation or support case = +25."""
+    links = ticket.get("links", [])
     for link in links:
         relation = link.get("relation", "").lower()
-        key = link.get("key", "")
         if any(kw in relation for kw in ["caused by", "escalat", "support", "salesforce"]):
-            reasons.append(f"Linked to escalation/support: {key}")
+            return 25
+    return 0
+
+
+def score_blocks_external(ticket):
+    """Blocks another team's work = +20."""
+    links = ticket.get("links", [])
+    for link in links:
+        relation = link.get("relation", "").lower()
         if "blocks" in relation and link.get("direction") == "outward":
             target_key = link.get("key", "")
             if not target_key.startswith("OCMUI-"):
-                reasons.append(f"Blocks external team: {target_key}")
-
-    # TODO: Check Due date within 6 weeks (would need 'duedate' field from Jira)
-
-    return reasons
+                return 20
+    return 0
 
 
 def compute_bonus_modifiers(ticket):
@@ -221,15 +232,14 @@ def score_ticket(ticket, dev_emails, qe_emails):
         "customer_facing": score_customer_facing(ticket),
         "watchers": score_watchers(ticket),
         "lifecycle_frozen": score_lifecycle_frozen(ticket),
+        "security": score_security(ticket),
+        "escalation_link": score_escalation_links(ticket),
+        "blocks_external": score_blocks_external(ticket),
     }
 
     base_score = sum(breakdown.values())
     bonus = compute_bonus_modifiers(ticket)
     total = base_score + bonus
-
-    escalation_reasons = check_auto_escalation(ticket)
-    if escalation_reasons:
-        total = max(total, 70)
 
     total = min(total, 100)
     suggested_label = get_suggested_label(total)
@@ -238,8 +248,6 @@ def score_ticket(ticket, dev_emails, qe_emails):
         "score": total,
         "breakdown": breakdown,
         "bonus": bonus,
-        "auto_escalated": bool(escalation_reasons),
-        "escalation_reasons": escalation_reasons,
         "suggested_label": suggested_label,
     }
 
@@ -270,8 +278,6 @@ def main():
             "score": result["score"],
             "breakdown": result["breakdown"],
             "bonus": result["bonus"],
-            "auto_escalated": result["auto_escalated"],
-            "escalation_reasons": result["escalation_reasons"],
             "suggested_label": result["suggested_label"],
             "current_priority": ticket["priority"],
             "priority_mismatch": (
@@ -291,7 +297,6 @@ def main():
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "total_tickets_scored": len(scored),
         "label_distribution": label_distribution,
-        "auto_escalated_count": len([s for s in scored if s["auto_escalated"]]),
         "priority_mismatches": len([s for s in scored if s["priority_mismatch"]]),
         "scored_tickets": scored,
     }
@@ -304,13 +309,11 @@ def main():
     for label, count in sorted(label_distribution.items()):
         print(f"  {label}: {count}")
 
-    print(f"\nAuto-escalated: {output['auto_escalated_count']}")
     print(f"Priority mismatches (suggested != current): {output['priority_mismatches']}")
 
     print(f"\nTop 15 highest priority tickets:")
     for s in scored[:15]:
-        flag = " [ESCALATED]" if s["auto_escalated"] else ""
-        print(f"  {s['score']:3d}  {s['key']}: {s['summary'][:55]}{flag}")
+        print(f"  {s['score']:3d}  {s['key']}: {s['summary'][:55]}")
 
 
 if __name__ == "__main__":

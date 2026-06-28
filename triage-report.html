@@ -96,7 +96,6 @@ th .resize-handle:hover, th .resize-handle.active { background: #60a5fa; }
 .badge-major { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
 .badge-normal { background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.4); }
 .badge-minor { background: rgba(75, 85, 99, 0.15); color: #6b7280; border: 1px solid rgba(75, 85, 99, 0.3); }
-.badge-escalated { background: rgba(167, 139, 250, 0.2); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.4); }
 
 .tab-bar { display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid #333; }
 .tab {
@@ -364,13 +363,12 @@ function render() {
   html += `</div>`;
 
   // Tabs (with counts)
-  const escalatedCount = D.priorities ? D.priorities.auto_escalated_count : 0;
   const dupGroups = findDuplicateGeneratedTickets();
   const dupTicketCount = dupGroups.reduce((sum, g) => sum + g.tickets.length, 0);
   const orphanedCount = D.tickets.filter(t => t.parent_status === 'Closed' || t.parent_status === 'Done').length;
 
   html += `<div class="tab-bar">`;
-  html += `<div class="tab active" data-tab="priorities">Priority Scoring (${escalatedCount} Auto-Escalated)</div>`;
+  html += `<div class="tab active" data-tab="priorities">Priority Scoring</div>`;
   html += `<div class="tab" data-tab="lifecycle">Lifecycle</div>`;
   html += `<div class="tab" data-tab="duplicates">Possible Duplicates (${dupTicketCount})</div>`;
   html += `<div class="tab" data-tab="cleanup">Orphaned Issues (${orphanedCount})</div>`;
@@ -433,7 +431,6 @@ function renderPrioritiesTab() {
     {name: 'Current'},
     {name: 'Priority Score', info: 'score-info'},
     {name: 'Suggested', info: 'suggested-info'},
-    {name: 'Escalated', info: 'escalated-info'},
     {name: 'Reporter'},
     {name: 'Comments'},
     {name: 'Last Updated'},
@@ -485,7 +482,6 @@ function renderPrioritiesTab() {
     } else {
       html += `<td class="priority-revert-col"></td>`;
     }
-    html += `<td>${s.auto_escalated ? '<span class="badge badge-escalated">escalated</span>' : ''}</td>`;
     html += `<td>${esc(s.reporter_email.split('@')[0] || s.reporter_name || '')}</td>`;
     html += `<td>${s.comment_count}</td>`;
     html += `<td class="nowrap">${(s.updated || '').slice(0, 10)}</td>`;
@@ -1179,16 +1175,19 @@ render();
 const INFO_CONTENT = {
   'score-info': `<h4>Priority Score (0\u2013100)</h4>
 <table><thead><tr><th>Signal</th><th>Max</th><th>Logic</th></tr></thead><tbody>
+<tr><td>CVE / Security</td><td>35</td><td>"CVE-" in summary, or has cve/security label</td></tr>
 <tr><td>Reporter source</td><td>25</td><td>External (customer/PM) = +25; QE = +10; Dev/Automation = 0</td></tr>
-<tr><td>Jira Priority field</td><td>20</td><td>Blocker=20, Critical=16, Major=12, Normal=6, Minor=2</td></tr>
+<tr><td>Customer escalation</td><td>25</td><td>Linked to Salesforce/support case</td></tr>
+<tr><td>Jira Priority field</td><td>20</td><td>Blocker=20, Critical=16, Major=12, Normal=6, Minor=2, Undefined=0</td></tr>
+<tr><td>Blocks external team</td><td>20</td><td>"blocks" link to a non-OCMUI ticket</td></tr>
 <tr><td>Comment count</td><td>15</td><td>5 = +8; 6\u201310 = +12; 10+ = +15</td></tr>
 <tr><td>Age + activity ratio</td><td>15</td><td>High activity on old ticket = high priority</td></tr>
 <tr><td>Linked to active Epic</td><td>10</td><td>Parent Epic is In Progress/Review/Refinement</td></tr>
 <tr><td>Customer-facing bug</td><td>10</td><td>Bug type, not tech-debt/internal</td></tr>
-<tr><td>Lifecycle-frozen</td><td>8</td><td>Deliberately preserved from auto-deletion \u2014 someone thought it worth keeping</td></tr>
+<tr><td>Lifecycle-frozen</td><td>8</td><td>Deliberately preserved from auto-deletion</td></tr>
 <tr><td>Watchers &gt; 3</td><td>5</td><td>Broad interest indicator</td></tr>
 </tbody></table>
-<p>Bonus: Recent regression bug (+5). Deduction: Sprint bounce (-5 each, max -15).</p>`,
+<p>Bonus: Recent regression bug (+5). Capped at 100.</p>`,
 
   'suggested-info': `<h4>Suggested Priority</h4>
 <p>Mapped from the computed score:</p>
@@ -1200,15 +1199,6 @@ const INFO_CONTENT = {
 <tr><td>0\u201319</td><td>Minor</td></tr>
 </tbody></table>
 <p>This is a <strong>suggestion</strong> \u2014 the defect manager or sprint planning reviews and confirms/overrides.</p>`,
-
-  'escalated-info': `<h4>Auto-Escalation</h4>
-<p>Tickets are auto-escalated to Critical+ (floor score = 70) when any of these are true:</p>
-<ul style="margin:6px 0 0 16px;">
-<li><strong>Customer escalation links</strong> \u2014 linked to Salesforce/support case</li>
-<li><strong>SLA/CVE due dates</strong> \u2014 Due date approaching within 2 sprints</li>
-<li><strong>Blocking external team</strong> \u2014 "blocks" link to a non-OCMUI ticket</li>
-</ul>`,
-
 
   'est-close-info': `<h4>Estimated Close Date</h4>
 <p>Approximation of when the lifecycle bot will auto-close this ticket.</p>
@@ -1244,7 +1234,7 @@ const INFO_CONTENT = {
 
 <h5>What Each Tab Does</h5>
 <ul style="margin:6px 0 0 16px;">
-<li><strong>Priority Scoring</strong> \u2014 Every ticket gets a computed score (0\u2013100) based on reporter source, comment activity, age, watchers, linked epics, and more. Compares computed vs. current Jira priority, and auto-escalates tickets with clear urgency signals (customer cases, SLA dates, external blockers).</li>
+<li><strong>Priority Scoring</strong> \u2014 Every ticket gets a computed score (0\u2013100) based on reporter source, comment activity, age, watchers, linked epics, CVE/security severity, customer escalation links, and external blockers. Compares computed vs. current Jira priority to surface mismatches.</li>
 <li><strong>Lifecycle</strong> \u2014 Tracks tickets marked <code>lifecycle-stale</code> (inactive for 180 days / ~6 months). The lifecycle bot will auto-close them after 90 more days (~3 months) of inactivity — 270 days (~9 months) total. Shows estimated close dates so you can rescue tickets that still matter.</li>
 <li><strong>Possible Duplicates</strong> \u2014 Detects cases where Jira automation ran multiple times on the same epic, creating duplicate generated child tasks.</li>
 <li><strong>Orphaned Issues</strong> \u2014 Open children whose parent epic is already Closed. These will never be worked on and should be closed or re-parented.</li>

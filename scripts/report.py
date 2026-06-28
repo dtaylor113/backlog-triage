@@ -85,22 +85,20 @@ def section_priorities(data):
         lines.append(f"| {display} | {count} |")
 
     lines.append("")
-    lines.append(f"- Auto-escalated (linked to escalation/blocking): **{data['auto_escalated_count']}**")
     lines.append(f"- Priority mismatches (suggested != current Jira Priority): **{data['priority_mismatches']}**")
     lines.append("")
 
     lines.append("### Top 30 Highest Priority Tickets")
     lines.append("")
-    lines.append("| Score | Ticket | Summary | Type | Current | Suggested | Escalated |")
-    lines.append("|:-----:|--------|---------|------|---------|-----------|:---------:|")
+    lines.append("| Score | Ticket | Summary | Type | Current | Suggested |")
+    lines.append("|:-----:|--------|---------|------|---------|-----------|")
 
     for s in data["scored_tickets"][:30]:
         link = f"[{s['key']}]({JIRA_BASE}/{s['key']})"
         suggested = s["suggested_label"].replace("suggested-priority-", "").capitalize()
-        escalated = "Yes" if s["auto_escalated"] else ""
         lines.append(
             f"| {s['score']} | {link} | {s['summary'][:45]} | {s['type']} | "
-            f"{s['current_priority']} | {suggested} | {escalated} |"
+            f"{s['current_priority']} | {suggested} |"
         )
 
     lines.append("")
@@ -186,7 +184,6 @@ def main():
     if priorities:
         stats.append(f"- Tickets scored: **{priorities.get('total_tickets_scored', 0)}**")
         stats.append(f"- Priority mismatches: **{priorities.get('priority_mismatches', 0)}**")
-        stats.append(f"- Auto-escalated: **{priorities.get('auto_escalated_count', 0)}**")
 
     if stats:
         report_lines.append("## Summary\n")
