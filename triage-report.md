@@ -1,22 +1,20 @@
 # OCMUI Backlog Triage Report
 
-> Generated: 2026-06-27 09:22:05 EDT
+> Generated: 2026-06-27 21:02:05 EDT
 
 ---
 
 ## Summary
 
-- Duplicate pairs: **1514**
-- Obsolete candidates: **155**
-- Tickets scored: **660**
-- Priority mismatches: **576**
-- Auto-escalated: **3**
+- Duplicate pairs: **1518**
+- Tickets scored: **658**
+- Priority mismatches: **571**
 
 ---
 
 ## Duplicate Candidates
 
-**1514 pairs** found above similarity threshold (0.55) using tfidf.
+**1518 pairs** found above similarity threshold (0.55) using tfidf.
 
 | Similarity | Ticket A | Ticket B | Same Reporter | Same Component |
 |-----------|----------|----------|:---:|:---:|
@@ -27,6 +25,7 @@
 | 1.000 | [OCMUI-4423](https://redhat.atlassian.net/browse/OCMUI-4423) | [OCMUI-4416](https://redhat.atlassian.net/browse/OCMUI-4416) | Yes |  |
 | 1.000 | [OCMUI-4421](https://redhat.atlassian.net/browse/OCMUI-4421) | [OCMUI-4415](https://redhat.atlassian.net/browse/OCMUI-4415) | Yes |  |
 | 1.000 | [OCMUI-4419](https://redhat.atlassian.net/browse/OCMUI-4419) | [OCMUI-4414](https://redhat.atlassian.net/browse/OCMUI-4414) | Yes |  |
+| 0.904 | [OCMUI-3949](https://redhat.atlassian.net/browse/OCMUI-3949) | [OCMUI-3947](https://redhat.atlassian.net/browse/OCMUI-3947) | Yes | Yes |
 | 0.898 | [OCMUI-4436](https://redhat.atlassian.net/browse/OCMUI-4436) | [OCMUI-3899](https://redhat.atlassian.net/browse/OCMUI-3899) |  |  |
 | 0.897 | [OCMUI-4435](https://redhat.atlassian.net/browse/OCMUI-4435) | [OCMUI-3898](https://redhat.atlassian.net/browse/OCMUI-3898) |  |  |
 | 0.895 | [OCMUI-4437](https://redhat.atlassian.net/browse/OCMUI-4437) | [OCMUI-3900](https://redhat.atlassian.net/browse/OCMUI-3900) |  |  |
@@ -37,13 +36,14 @@
 | 0.884 | [OCMUI-4463](https://redhat.atlassian.net/browse/OCMUI-4463) | [OCMUI-3944](https://redhat.atlassian.net/browse/OCMUI-3944) |  |  |
 | 0.883 | [OCMUI-4098](https://redhat.atlassian.net/browse/OCMUI-4098) | [OCMUI-4097](https://redhat.atlassian.net/browse/OCMUI-4097) | Yes |  |
 | 0.882 | [OCMUI-4465](https://redhat.atlassian.net/browse/OCMUI-4465) | [OCMUI-3946](https://redhat.atlassian.net/browse/OCMUI-3946) |  |  |
-| 0.880 | [OCMUI-4157](https://redhat.atlassian.net/browse/OCMUI-4157) | [OCMUI-4156](https://redhat.atlassian.net/browse/OCMUI-4156) | Yes |  |
+| 0.881 | [OCMUI-4157](https://redhat.atlassian.net/browse/OCMUI-4157) | [OCMUI-4156](https://redhat.atlassian.net/browse/OCMUI-4156) | Yes |  |
 | 0.875 | [OCMUI-4260](https://redhat.atlassian.net/browse/OCMUI-4260) | [OCMUI-4259](https://redhat.atlassian.net/browse/OCMUI-4259) | Yes |  |
 | 0.873 | [OCMUI-4615](https://redhat.atlassian.net/browse/OCMUI-4615) | [OCMUI-4614](https://redhat.atlassian.net/browse/OCMUI-4614) | Yes |  |
 | 0.871 | [OCMUI-4246](https://redhat.atlassian.net/browse/OCMUI-4246) | [OCMUI-4245](https://redhat.atlassian.net/browse/OCMUI-4245) | Yes |  |
 | 0.866 | [OCMUI-3863](https://redhat.atlassian.net/browse/OCMUI-3863) | [OCMUI-3862](https://redhat.atlassian.net/browse/OCMUI-3862) | Yes |  |
 | 0.852 | [OCMUI-4228](https://redhat.atlassian.net/browse/OCMUI-4228) | [OCMUI-4227](https://redhat.atlassian.net/browse/OCMUI-4227) | Yes |  |
 | 0.847 | [OCMUI-3278](https://redhat.atlassian.net/browse/OCMUI-3278) | [OCMUI-3270](https://redhat.atlassian.net/browse/OCMUI-3270) | Yes | Yes |
+| 0.842 | [OCMUI-3942](https://redhat.atlassian.net/browse/OCMUI-3942) | [OCMUI-3940](https://redhat.atlassian.net/browse/OCMUI-3940) | Yes | Yes |
 | 0.839 | [OCMUI-3965](https://redhat.atlassian.net/browse/OCMUI-3965) | [OCMUI-3964](https://redhat.atlassian.net/browse/OCMUI-3964) | Yes |  |
 | 0.834 | [OCMUI-3278](https://redhat.atlassian.net/browse/OCMUI-3278) | [OCMUI-3274](https://redhat.atlassian.net/browse/OCMUI-3274) | Yes | Yes |
 | 0.830 | [OCMUI-4672](https://redhat.atlassian.net/browse/OCMUI-4672) | [OCMUI-4671](https://redhat.atlassian.net/browse/OCMUI-4671) | Yes |  |
@@ -53,23 +53,21 @@
 | 0.821 | [OCMUI-3900](https://redhat.atlassian.net/browse/OCMUI-3900) | [OCMUI-3899](https://redhat.atlassian.net/browse/OCMUI-3899) | Yes | Yes |
 | 0.816 | [OCMUI-4083](https://redhat.atlassian.net/browse/OCMUI-4083) | [OCMUI-4082](https://redhat.atlassian.net/browse/OCMUI-4082) | Yes | Yes |
 | 0.815 | [OCMUI-3851](https://redhat.atlassian.net/browse/OCMUI-3851) | [OCMUI-3850](https://redhat.atlassian.net/browse/OCMUI-3850) | Yes | Yes |
-| 0.813 | [OCMUI-4098](https://redhat.atlassian.net/browse/OCMUI-4098) | [OCMUI-4096](https://redhat.atlassian.net/browse/OCMUI-4096) | Yes |  |
 | 0.809 | [OCMUI-3925](https://redhat.atlassian.net/browse/OCMUI-3925) | [OCMUI-3924](https://redhat.atlassian.net/browse/OCMUI-3924) | Yes | Yes |
-| 0.808 | [OCMUI-3274](https://redhat.atlassian.net/browse/OCMUI-3274) | [OCMUI-3270](https://redhat.atlassian.net/browse/OCMUI-3270) | Yes | Yes |
+| 0.809 | [OCMUI-3274](https://redhat.atlassian.net/browse/OCMUI-3274) | [OCMUI-3270](https://redhat.atlassian.net/browse/OCMUI-3270) | Yes | Yes |
+| 0.807 | [OCMUI-4098](https://redhat.atlassian.net/browse/OCMUI-4098) | [OCMUI-4096](https://redhat.atlassian.net/browse/OCMUI-4096) | Yes |  |
 | 0.807 | [OCMUI-3939](https://redhat.atlassian.net/browse/OCMUI-3939) | [OCMUI-3938](https://redhat.atlassian.net/browse/OCMUI-3938) | Yes | Yes |
 | 0.805 | [OCMUI-4263](https://redhat.atlassian.net/browse/OCMUI-4263) | [OCMUI-4262](https://redhat.atlassian.net/browse/OCMUI-4262) | Yes |  |
 | 0.803 | [OCMUI-4577](https://redhat.atlassian.net/browse/OCMUI-4577) | [OCMUI-4576](https://redhat.atlassian.net/browse/OCMUI-4576) | Yes |  |
 | 0.800 | [OCMUI-3946](https://redhat.atlassian.net/browse/OCMUI-3946) | [OCMUI-3945](https://redhat.atlassian.net/browse/OCMUI-3945) | Yes | Yes |
-| 0.800 | [OCMUI-4097](https://redhat.atlassian.net/browse/OCMUI-4097) | [OCMUI-4096](https://redhat.atlassian.net/browse/OCMUI-4096) | Yes |  |
 | 0.800 | [OCMUI-3909](https://redhat.atlassian.net/browse/OCMUI-3909) | [OCMUI-3907](https://redhat.atlassian.net/browse/OCMUI-3907) | Yes | Yes |
 | 0.799 | [OCMUI-4660](https://redhat.atlassian.net/browse/OCMUI-4660) | [OCMUI-4659](https://redhat.atlassian.net/browse/OCMUI-4659) | Yes |  |
 | 0.799 | [OCMUI-4249](https://redhat.atlassian.net/browse/OCMUI-4249) | [OCMUI-4248](https://redhat.atlassian.net/browse/OCMUI-4248) | Yes |  |
-| 0.796 | [OCMUI-3949](https://redhat.atlassian.net/browse/OCMUI-3949) | [OCMUI-3947](https://redhat.atlassian.net/browse/OCMUI-3947) | Yes | Yes |
 | 0.794 | [OCMUI-4157](https://redhat.atlassian.net/browse/OCMUI-4157) | [OCMUI-4155](https://redhat.atlassian.net/browse/OCMUI-4155) | Yes |  |
-| 0.793 | [OCMUI-3932](https://redhat.atlassian.net/browse/OCMUI-3932) | [OCMUI-3931](https://redhat.atlassian.net/browse/OCMUI-3931) | Yes | Yes |
-| 0.791 | [OCMUI-4260](https://redhat.atlassian.net/browse/OCMUI-4260) | [OCMUI-4258](https://redhat.atlassian.net/browse/OCMUI-4258) | Yes |  |
+| 0.794 | [OCMUI-4097](https://redhat.atlassian.net/browse/OCMUI-4097) | [OCMUI-4096](https://redhat.atlassian.net/browse/OCMUI-4096) | Yes |  |
+| 0.794 | [OCMUI-3932](https://redhat.atlassian.net/browse/OCMUI-3932) | [OCMUI-3931](https://redhat.atlassian.net/browse/OCMUI-3931) | Yes | Yes |
+| 0.792 | [OCMUI-4260](https://redhat.atlassian.net/browse/OCMUI-4260) | [OCMUI-4258](https://redhat.atlassian.net/browse/OCMUI-4258) | Yes |  |
 | 0.789 | [OCMUI-3892](https://redhat.atlassian.net/browse/OCMUI-3892) | [OCMUI-3891](https://redhat.atlassian.net/browse/OCMUI-3891) | Yes | Yes |
-| 0.789 | [OCMUI-4615](https://redhat.atlassian.net/browse/OCMUI-4615) | [OCMUI-4613](https://redhat.atlassian.net/browse/OCMUI-4613) | Yes |  |
 
 ### Pair Details
 
@@ -87,192 +85,117 @@
    vs [OCMUI-4415](https://redhat.atlassian.net/browse/OCMUI-4415): CI Automation: ROSA HCP Day 1 wizard machine pool redesign 
 7. **1.000** — [OCMUI-4419](https://redhat.atlassian.net/browse/OCMUI-4419): Post-merge testing: ROSA HCP Day 1 wizard machine pool redesign 
    vs [OCMUI-4414](https://redhat.atlassian.net/browse/OCMUI-4414): Post-merge testing: ROSA HCP Day 1 wizard machine pool redesign 
-8. **0.898** — [OCMUI-4436](https://redhat.atlassian.net/browse/OCMUI-4436): CI Automation: Day 2 cluster details, machine pools table redesign
+8. **0.904** — [OCMUI-3949](https://redhat.atlassian.net/browse/OCMUI-3949): [QE] OSD Day 2 add/edit machine pool redesign
+   vs [OCMUI-3947](https://redhat.atlassian.net/browse/OCMUI-3947): [UI] OSD Day 2 add/edit machine pool redesign
+9. **0.898** — [OCMUI-4436](https://redhat.atlassian.net/browse/OCMUI-4436): CI Automation: Day 2 cluster details, machine pools table redesign
    vs [OCMUI-3899](https://redhat.atlassian.net/browse/OCMUI-3899): CI Automation: Day 2 cluster details, machine pools table redesign
-9. **0.897** — [OCMUI-4435](https://redhat.atlassian.net/browse/OCMUI-4435): Post-merge testing: Day 2 cluster details, machine pools table redesign
+10. **0.897** — [OCMUI-4435](https://redhat.atlassian.net/browse/OCMUI-4435): Post-merge testing: Day 2 cluster details, machine pools table redesign
    vs [OCMUI-3898](https://redhat.atlassian.net/browse/OCMUI-3898): Post-merge testing: Day 2 cluster details, machine pools table redesign
-10. **0.895** — [OCMUI-4437](https://redhat.atlassian.net/browse/OCMUI-4437): E2E Automation: Day 2 cluster details, machine pools table redesign
+11. **0.895** — [OCMUI-4437](https://redhat.atlassian.net/browse/OCMUI-4437): E2E Automation: Day 2 cluster details, machine pools table redesign
    vs [OCMUI-3900](https://redhat.atlassian.net/browse/OCMUI-3900): E2E Automation: Day 2 cluster details, machine pools table redesign
-11. **0.890** — [OCMUI-4457](https://redhat.atlassian.net/browse/OCMUI-4457): CI Automation: ROSA classic Day 2 add/edit machine pool redesign
+12. **0.890** — [OCMUI-4457](https://redhat.atlassian.net/browse/OCMUI-4457): CI Automation: ROSA classic Day 2 add/edit machine pool redesign
    vs [OCMUI-3938](https://redhat.atlassian.net/browse/OCMUI-3938): CI Automation: ROSA classic Day 2 add/edit machine pool redesign
-12. **0.889** — [OCMUI-4456](https://redhat.atlassian.net/browse/OCMUI-4456): Post-merge testing: ROSA classic Day 2 add/edit machine pool redesign
+13. **0.889** — [OCMUI-4456](https://redhat.atlassian.net/browse/OCMUI-4456): Post-merge testing: ROSA classic Day 2 add/edit machine pool redesign
    vs [OCMUI-3937](https://redhat.atlassian.net/browse/OCMUI-3937): Post-merge testing: ROSA classic Day 2 add/edit machine pool redesign
-13. **0.886** — [OCMUI-4458](https://redhat.atlassian.net/browse/OCMUI-4458): E2E Automation: ROSA classic Day 2 add/edit machine pool redesign
+14. **0.886** — [OCMUI-4458](https://redhat.atlassian.net/browse/OCMUI-4458): E2E Automation: ROSA classic Day 2 add/edit machine pool redesign
    vs [OCMUI-3939](https://redhat.atlassian.net/browse/OCMUI-3939): E2E Automation: ROSA classic Day 2 add/edit machine pool redesign
-14. **0.886** — [OCMUI-4464](https://redhat.atlassian.net/browse/OCMUI-4464): CI Automation: OSD Day 2 add/edit machine pool redesign
+15. **0.886** — [OCMUI-4464](https://redhat.atlassian.net/browse/OCMUI-4464): CI Automation: OSD Day 2 add/edit machine pool redesign
    vs [OCMUI-3945](https://redhat.atlassian.net/browse/OCMUI-3945): CI Automation: OSD Day 2 add/edit machine pool redesign
-15. **0.884** — [OCMUI-4463](https://redhat.atlassian.net/browse/OCMUI-4463): Post-merge testing: OSD Day 2 add/edit machine pool redesign
+16. **0.884** — [OCMUI-4463](https://redhat.atlassian.net/browse/OCMUI-4463): Post-merge testing: OSD Day 2 add/edit machine pool redesign
    vs [OCMUI-3944](https://redhat.atlassian.net/browse/OCMUI-3944): Post-merge testing: OSD Day 2 add/edit machine pool redesign
-16. **0.883** — [OCMUI-4098](https://redhat.atlassian.net/browse/OCMUI-4098): Convert all the pending OSD(GCP) Cypress Spec to Playwright
+17. **0.883** — [OCMUI-4098](https://redhat.atlassian.net/browse/OCMUI-4098): Convert all the pending OSD(GCP) Cypress Spec to Playwright
    vs [OCMUI-4097](https://redhat.atlassian.net/browse/OCMUI-4097): Convert all the pending OSD(AWS) Cypress Spec to Playwright
-17. **0.882** — [OCMUI-4465](https://redhat.atlassian.net/browse/OCMUI-4465): E2E Automation: OSD Day 2 add/edit machine pool redesign
+18. **0.882** — [OCMUI-4465](https://redhat.atlassian.net/browse/OCMUI-4465): E2E Automation: OSD Day 2 add/edit machine pool redesign
    vs [OCMUI-3946](https://redhat.atlassian.net/browse/OCMUI-3946): E2E Automation: OSD Day 2 add/edit machine pool redesign
-18. **0.880** — [OCMUI-4157](https://redhat.atlassian.net/browse/OCMUI-4157): E2E Automation: UI updates to support 500 worker nodes for OSD on Google Cloud
+19. **0.881** — [OCMUI-4157](https://redhat.atlassian.net/browse/OCMUI-4157): E2E Automation: UI updates to support 500 worker nodes for OSD on Google Cloud
    vs [OCMUI-4156](https://redhat.atlassian.net/browse/OCMUI-4156): CI Automation: UI updates to support 500 worker nodes for OSD on Google Cloud
-19. **0.875** — [OCMUI-4260](https://redhat.atlassian.net/browse/OCMUI-4260): E2E Automation: [OCM UI] Epic for ROSA-699 - Installing New ROSA & OSD Cluster w
+20. **0.875** — [OCMUI-4260](https://redhat.atlassian.net/browse/OCMUI-4260): E2E Automation: [OCM UI] Epic for ROSA-699 - Installing New ROSA & OSD Cluster w
    vs [OCMUI-4259](https://redhat.atlassian.net/browse/OCMUI-4259): CI Automation: [OCM UI] Epic for ROSA-699 - Installing New ROSA & OSD Cluster wi
-20. **0.873** — [OCMUI-4615](https://redhat.atlassian.net/browse/OCMUI-4615): E2E Automation: [OCM UI] Epic for ROSA-725 - Align severity label with the new H
+21. **0.873** — [OCMUI-4615](https://redhat.atlassian.net/browse/OCMUI-4615): E2E Automation: [OCM UI] Epic for ROSA-725 - Align severity label with the new H
    vs [OCMUI-4614](https://redhat.atlassian.net/browse/OCMUI-4614): CI Automation: [OCM UI] Epic for ROSA-725 - Align severity label with the new HC
-21. **0.871** — [OCMUI-4246](https://redhat.atlassian.net/browse/OCMUI-4246): E2E Automation: [OCM UI] Epic for ROSA-482 - pop-up notifications for existing R
+22. **0.871** — [OCMUI-4246](https://redhat.atlassian.net/browse/OCMUI-4246): E2E Automation: [OCM UI] Epic for ROSA-482 - pop-up notifications for existing R
    vs [OCMUI-4245](https://redhat.atlassian.net/browse/OCMUI-4245): CI Automation: [OCM UI] Epic for ROSA-482 - pop-up notifications for existing RO
-22. **0.866** — [OCMUI-3863](https://redhat.atlassian.net/browse/OCMUI-3863): E2E Automation: Clarify autoscaling terminology and status on Cluster Details → 
+23. **0.866** — [OCMUI-3863](https://redhat.atlassian.net/browse/OCMUI-3863): E2E Automation: Clarify autoscaling terminology and status on Cluster Details → 
    vs [OCMUI-3862](https://redhat.atlassian.net/browse/OCMUI-3862): CI Automation: Clarify autoscaling terminology and status on Cluster Details → O
-23. **0.852** — [OCMUI-4228](https://redhat.atlassian.net/browse/OCMUI-4228): E2E Automation: Google Cloud specific version of the HCC and OCM console
+24. **0.852** — [OCMUI-4228](https://redhat.atlassian.net/browse/OCMUI-4228): E2E Automation: Google Cloud specific version of the HCC and OCM console
    vs [OCMUI-4227](https://redhat.atlassian.net/browse/OCMUI-4227): CI Automation: Google Cloud specific version of the HCC and OCM console
-24. **0.847** — [OCMUI-3278](https://redhat.atlassian.net/browse/OCMUI-3278): [HCP] Enable cluster transfer ownership Milestone 4
+25. **0.847** — [OCMUI-3278](https://redhat.atlassian.net/browse/OCMUI-3278): [HCP] Enable cluster transfer ownership Milestone 4
    vs [OCMUI-3270](https://redhat.atlassian.net/browse/OCMUI-3270): [OCP] [ARO] Enable cluster transfer ownership Milestone 2
-25. **0.839** — [OCMUI-3965](https://redhat.atlassian.net/browse/OCMUI-3965): E2E Automation: A list of enhancements for OCM's cluster list
+26. **0.842** — [OCMUI-3942](https://redhat.atlassian.net/browse/OCMUI-3942): [QE] ROSA classic Day 2 add/edit machine pool redesign
+   vs [OCMUI-3940](https://redhat.atlassian.net/browse/OCMUI-3940): [UI] ROSA classic Day 2 add/edit machine pool redesign
+27. **0.839** — [OCMUI-3965](https://redhat.atlassian.net/browse/OCMUI-3965): E2E Automation: A list of enhancements for OCM's cluster list
    vs [OCMUI-3964](https://redhat.atlassian.net/browse/OCMUI-3964): CI Automation: A list of enhancements for OCM's cluster list
-26. **0.834** — [OCMUI-3278](https://redhat.atlassian.net/browse/OCMUI-3278): [HCP] Enable cluster transfer ownership Milestone 4
+28. **0.834** — [OCMUI-3278](https://redhat.atlassian.net/browse/OCMUI-3278): [HCP] Enable cluster transfer ownership Milestone 4
    vs [OCMUI-3274](https://redhat.atlassian.net/browse/OCMUI-3274): [OSD] [RHOIC] Enable cluster transfer ownership Milestone 3
-27. **0.830** — [OCMUI-4672](https://redhat.atlassian.net/browse/OCMUI-4672): E2E Automation: UI Support for GCP WIF Permission Refinements (OSDGCP-37)
+29. **0.830** — [OCMUI-4672](https://redhat.atlassian.net/browse/OCMUI-4672): E2E Automation: UI Support for GCP WIF Permission Refinements (OSDGCP-37)
    vs [OCMUI-4671](https://redhat.atlassian.net/browse/OCMUI-4671): CI Automation: UI Support for GCP WIF Permission Refinements (OSDGCP-37)
-28. **0.827** — [OCMUI-4637](https://redhat.atlassian.net/browse/OCMUI-4637): E2E Automation: [OCM UI] Epic for ROSA-26 - Support and expose SpotMarketOptions
+30. **0.827** — [OCMUI-4637](https://redhat.atlassian.net/browse/OCMUI-4637): E2E Automation: [OCM UI] Epic for ROSA-26 - Support and expose SpotMarketOptions
    vs [OCMUI-4636](https://redhat.atlassian.net/browse/OCMUI-4636): CI Automation: [OCM UI] Epic for ROSA-26 - Support and expose SpotMarketOptions 
-29. **0.824** — [OCMUI-4653](https://redhat.atlassian.net/browse/OCMUI-4653): E2E Automation: [OCP] [ARO] Enable cluster transfer ownership Milestone 2
-   vs [OCMUI-4652](https://redhat.atlassian.net/browse/OCMUI-4652): CI Automation: [OCP] [ARO] Enable cluster transfer ownership Milestone 2
-30. **0.822** — [OCMUI-3421](https://redhat.atlassian.net/browse/OCMUI-3421): E2E Automation: Cluster Details Notification banners
-   vs [OCMUI-3420](https://redhat.atlassian.net/browse/OCMUI-3420): CI Automation: Cluster Details Notification banners
-
-
----
-
-## Obsolete Candidates
-
-**155 candidates** found (High: 47, Medium: 0, Low: 108)
-
-### High Confidence
-
-| Ticket | Summary | Age (mo) | Inactive (mo) | Reasons |
-|--------|---------|:--------:|:------------:|---------|
-| [OCMUI-2305](https://redhat.atlassian.net/browse/OCMUI-2305) | Ship the `oc`  client tool / installer  version th | 30 | 21 | References 1 deleted element(s): /openshift/downloads; Ticket is 30 months old |
-| [OCMUI-1832](https://redhat.atlassian.net/browse/OCMUI-1832) | Metal IPI console.redhat.com create cluster page d | 25 | 19 | References 1 deleted element(s): /openshift/create; Ticket is 25 months old |
-| [OCMUI-1675](https://redhat.atlassian.net/browse/OCMUI-1675) | Customer experienced issues getting offline token | 26 | 26 | References 1 deleted element(s): /openshift/token/rosa/show; Ticket is 26 months old |
-| [OCMUI-1660](https://redhat.atlassian.net/browse/OCMUI-1660) | "Could not grant offline token" advice is insuffic | 27 | 27 | References 3 deleted element(s): /blob/master/src/components/CLILoginPage/TokenBox.tsx, /blob/master/src/components/CLILoginPage/TokenUtils.ts, /blob/master/src/components/CLILoginPage/RevokeTokensInstructions.tsx; Ticket is 27 months old |
-| [OCMUI-1256](https://redhat.atlassian.net/browse/OCMUI-1256) | [Cluster details] IDP console.error at editing | 30 | 29 | References 4 deleted element(s): /openshift/bundle, sentry/browser/esm/integrations/trycatch.js, b0ee9b5378123340.js; Ticket is 30 months old |
-| [OCMUI-680](https://redhat.atlassian.net/browse/OCMUI-680) | Inexact error message "undefined" when cluster not | 41 | 32 | References 3 deleted element(s): /openshift/details/00000000-0000-0000-0000-000000000000, /openshift/details/00000000, /openshift/details/s/undefined; Ticket is 41 months old |
-| [OCMUI-671](https://redhat.atlassian.net/browse/OCMUI-671) | Choose/copy text from install type card will open  | 41 | 27 | References 1 deleted element(s): /openshift/install/platform-agnostic; Ticket is 41 months old |
-| [OCMUI-1251](https://redhat.atlassian.net/browse/OCMUI-1251) | [ROSA Wizard] Failing check for "out of date" acco | 30 | 3 | References 2 deleted element(s): portal/blob/bebe91fe5336d3078e3653a79d52930493f549e5/src/components/clusters/CreateROSAPage/CreateROSAWizard/AccountsRolesScreen/AccountRolesARNsSection.jsx, portal/blob/14e06130a1e98b7f64fd495680db14eb91225011/src/components/releases/hooks.ts; References 1 possibly-removed component(s): CreateROSAPage |
-| [OCMUI-1971](https://redhat.atlassian.net/browse/OCMUI-1971) | [Update Cluster modal] For ROSA-HCP clusters, hide | 24 | 24 | References 1 deleted element(s): /openshift/rosa/blob/master/cmd/upgrade/roles/cmd; Ticket is 24 months old |
-| [OCMUI-1274](https://redhat.atlassian.net/browse/OCMUI-1274) | [Releases Page] Missing versions numbers on API er | 30 | 29 | References 2 deleted element(s): portal/blob/bebe91fe5336d3078e3653a79d52930493f549e5/src/components/releases/ReleaseChannel.tsx, portal/blob/14e06130a1e98b7f64fd495680db14eb91225011/src/components/releases/hooks.ts; Ticket is 29 months old |
-| [OCMUI-656](https://redhat.atlassian.net/browse/OCMUI-656) | [OSD Wizard] Mobile testing - Prerequisites link i | 40 | 32 | References 1 deleted element(s): /openshift/create; Ticket is 40 months old |
-| [OCMUI-2738](https://redhat.atlassian.net/browse/OCMUI-2738) | [SPIKE] Increase nodejs version to 22 | 19 | 9 | References 3 deleted element(s): config.js, package.js, Node.js; Ticket is 19 months old |
-| [OCMUI-1367](https://redhat.atlassian.net/browse/OCMUI-1367) | [OSD wizard v2] DebugClusterRequest / actual reque | 29 | 3 | References 3 deleted element(s): /openshift/create/osd, /blob/be00e0b045d716648741d3187c1799e3e5689458/src/components/clusters/wizards/osd/ReviewAndCreate/ReviewAndCreateContent.tsx, /blob/be00e0b045d716648741d3187c1799e3e5689458/src/components/clusters/wizards/osd/CreateOsdWizard.tsx; Ticket is 29 months old |
-| [OCMUI-698](https://redhat.atlassian.net/browse/OCMUI-698) | Two "Clusters with issues" cards on overview page  | 37 | 3 | References 1 deleted element(s): /openshift/overview; Ticket is 37 months old |
-| [OCMUI-637](https://redhat.atlassian.net/browse/OCMUI-637) | OCM footer styling needs to be scoped or removed | 42 | 3 | References 2 deleted element(s): chrome/blob/master/src/components/Footer/Footer.scss, /blob/master/src/styles/app.scss; Ticket is 42 months old |
-| [OCMUI-3371](https://redhat.atlassian.net/browse/OCMUI-3371) | Register disconnected cluster form submit should b | 14 | 13 | References 2 deleted element(s): /openshift/cluster-list, /openshift/register; No activity in 13 months |
-| [OCMUI-3033](https://redhat.atlassian.net/browse/OCMUI-3033) | Investigate whether TokenUtils could be replaced b | 17 | 12 | References 1 deleted element(s): portal/blob/7ed7b18d59afd136dce768d788eca2b4a77f38df/src/components/CLILoginPage/TokenUtils.ts; No activity in 12 months |
-| [OCMUI-742](https://redhat.atlassian.net/browse/OCMUI-742) | [OSD] AWS infrastructure access tab flashes on the | 35 | 3 | References 1 deleted element(s): /openshift/create/osd; Ticket is 35 months old |
-| [OCMUI-641](https://redhat.atlassian.net/browse/OCMUI-641) | Status of overview dashboard page | 39 | 3 | References 1 deleted element(s): /openshift/overview; Ticket is 39 months old |
-| [OCMUI-4730](https://redhat.atlassian.net/browse/OCMUI-4730) | [OSD][Google Cloud Marketplace] The AWS tile erron | 0 | 0 | References 1 deleted element(s): /openshift/create/osd |
-| [OCMUI-4722](https://redhat.atlassian.net/browse/OCMUI-4722) | [PF dark mode] button text is low contrast on hove | 0 | 0 | References 1 deleted element(s): /openshift/create |
-| [OCMUI-4721](https://redhat.atlassian.net/browse/OCMUI-4721) | [PF dark mode] button has wrong icon color when di | 0 | 0 | References 1 deleted element(s): /openshift/clusters/list |
-| [OCMUI-4682](https://redhat.atlassian.net/browse/OCMUI-4682) | OCMUI Discovery for ROSA Canonical E2E Test Suite  | 0 | 0 | References 1 deleted element(s): Node.js |
-| [OCMUI-4594](https://redhat.atlassian.net/browse/OCMUI-4594) | [check-links.mjs script] Google Cloud Marketplace  | 1 | 1 | References 1 deleted element(s): Node.js |
-| [OCMUI-4546](https://redhat.atlassian.net/browse/OCMUI-4546) | [Delete HTPasswd users]The dialog displays duplica | 2 | 2 | References 1 deleted element(s): /openshift/details/ |
-| [OCMUI-4519](https://redhat.atlassian.net/browse/OCMUI-4519) | Contradiction between Console and EA | 3 | 0 | References 1 deleted element(s): /openshift/install/ |
-| [OCMUI-4512](https://redhat.atlassian.net/browse/OCMUI-4512) | [OCP 5] Tests - Clean Up Cypress CurrentOcVersion. | 2 | 2 | References 4 deleted element(s): cypress/e2e/overview/Overview.js, CurrentOcVersion.js, cypress/support/CurrentOcVersion.js |
-| [OCMUI-4511](https://redhat.atlassian.net/browse/OCMUI-4511) | [OCP 5] Replace fragile parseFloat() version parsi | 2 | 0 | References 1 deleted element(s): CurrentOcVersion.js |
-| [OCMUI-4508](https://redhat.atlassian.net/browse/OCMUI-4508) | [OCP 5] Downloads page - Update all openshift-v4 d | 2 | 0 | References 3 deleted element(s): /openshift-v4/, /openshift-v5/, /openshift/downloads |
-| [OCMUI-4389](https://redhat.atlassian.net/browse/OCMUI-4389) | ROSA/OSD wizard - Stale "Data is not ready" error  | 2 | 2 | References 1 deleted element(s): /openshift/create/rosa/wizard |
-
-### Medium Confidence
-
-None found.
-
-### Low Confidence
-
-108 tickets flagged (age + inactivity only). Showing top 20:
-
-| Ticket | Summary | Age (mo) | Inactive (mo) |
-|--------|---------|:--------:|:------------:|
-| [OCMUI-2781](https://redhat.atlassian.net/browse/OCMUI-2781) | Console UI: Cluster Autoscaler "cores-total-max" a | 18 | 12 |
-| [OCMUI-2479](https://redhat.atlassian.net/browse/OCMUI-2479) | ROSA HCP UI installation comes with a single subne | 21 | 21 |
-| [OCMUI-2187](https://redhat.atlassian.net/browse/OCMUI-2187) | ROSA HCP: OCM UI Support for PodPidsLimit  | 27 | 14 |
-| [OCMUI-1991](https://redhat.atlassian.net/browse/OCMUI-1991) | Provide FIPS-capable installer download links for  | 24 | 24 |
-| [OCMUI-1829](https://redhat.atlassian.net/browse/OCMUI-1829) | Metal IPI for multi console.redhat.com create clus | 25 | 19 |
-| [OCMUI-1782](https://redhat.atlassian.net/browse/OCMUI-1782) | Version operator is in failed state after cluster  | 25 | 24 |
-| [OCMUI-1734](https://redhat.atlassian.net/browse/OCMUI-1734) | [FedRAMP] When getting the token from the UI to lo | 26 | 21 |
-| [OCMUI-1724](https://redhat.atlassian.net/browse/OCMUI-1724) | ROSA HCP user aws tags for day 2 creation of machi | 26 | 17 |
-| [OCMUI-1706](https://redhat.atlassian.net/browse/OCMUI-1706) | Hybrid cloud console is redirecting customers to a | 26 | 25 |
-| [OCMUI-1600](https://redhat.atlassian.net/browse/OCMUI-1600) | [OSD wizard CCS] Key ARNs not re-validated on regi | 27 | 24 |
-| [OCMUI-1492](https://redhat.atlassian.net/browse/OCMUI-1492) | Hibernating an OSD-GCP cluster points to ROSA link | 28 | 20 |
-| [OCMUI-1474](https://redhat.atlassian.net/browse/OCMUI-1474) | [FedRAMP] ROSA CLI and Cloud Console showing incon | 28 | 28 |
-| [OCMUI-1414](https://redhat.atlassian.net/browse/OCMUI-1414) | [ROSA WIZARD] validation related to the absence of | 28 | 28 |
-| [OCMUI-1197](https://redhat.atlassian.net/browse/OCMUI-1197) | [OCM-UI]: Select a VPC to install you cluster into | 30 | 17 |
-| [OCMUI-1118](https://redhat.atlassian.net/browse/OCMUI-1118) | Schedule upgrade for machine pools | 31 | 14 |
-| [OCMUI-1096](https://redhat.atlassian.net/browse/OCMUI-1096) | "reset the schedule" operation fails  in Settings  | 31 | 29 |
-| [OCMUI-1021](https://redhat.atlassian.net/browse/OCMUI-1021) | UI should check capability 'capability.cluster.aut | 31 | 18 |
-| [OCMUI-974](https://redhat.atlassian.net/browse/OCMUI-974) | [OCM-UI] There is no error message for label forma | 47 | 28 |
-| [OCMUI-941](https://redhat.atlassian.net/browse/OCMUI-941) | logVerbosity value must be between 1 and 6 is inco | 34 | 27 |
-| [OCMUI-934](https://redhat.atlassian.net/browse/OCMUI-934) | OpenShift cluster monitoring operator link broken | 40 | 29 |
 
 
 ---
 
 ## Priority Scoring
 
-**660 tickets** scored.
+**658 tickets** scored.
 
 ### Distribution
 
 | Suggested Priority | Count |
 |-------------------|:-----:|
-| Blocker | 1 |
+| Blocker | 2 |
 | Critical | 12 |
-| Major | 91 |
-| Minor | 315 |
-| Normal | 241 |
+| Major | 77 |
+| Minor | 320 |
+| Normal | 247 |
 
-- Auto-escalated (linked to escalation/blocking): **3**
-- Priority mismatches (suggested != current Jira Priority): **576**
+- Priority mismatches (suggested != current Jira Priority): **571**
 
 ### Top 30 Highest Priority Tickets
 
-| Score | Ticket | Summary | Type | Current | Suggested | Escalated |
-|:-----:|--------|---------|------|---------|-----------|:---------:|
-| 84 | [OCMUI-4516](https://redhat.atlassian.net/browse/OCMUI-4516) | OCM only recognize Sockets or Cores/vCPUs as  | Bug | Major | Blocker |  |
-| 79 | [OCMUI-4519](https://redhat.atlassian.net/browse/OCMUI-4519) | Contradiction between Console and EA | Bug | Major | Critical |  |
-| 79 | [OCMUI-3997](https://redhat.atlassian.net/browse/OCMUI-3997) | openshift-install download links use mirror.o | Bug | Major | Critical |  |
-| 72 | [OCMUI-3956](https://redhat.atlassian.net/browse/OCMUI-3956) | Mexico Region doesn't appear as an enabled re | Bug | Major | Critical |  |
-| 70 | [OCMUI-4375](https://redhat.atlassian.net/browse/OCMUI-4375) | Cluster list filters always split across mult | Bug | Normal | Critical | Yes |
-| 70 | [OCMUI-4158](https://redhat.atlassian.net/browse/OCMUI-4158) | Block cluster transfers for Assisted Installe | Story | Normal | Critical | Yes |
-| 70 | [OCMUI-790](https://redhat.atlassian.net/browse/OCMUI-790) | Cluster autoscaler: workaround since API does | Bug | Normal | Critical | Yes |
-| 69 | [OCMUI-1782](https://redhat.atlassian.net/browse/OCMUI-1782) | Version operator is in failed state after clu | Bug | Normal | Critical |  |
-| 63 | [OCMUI-1414](https://redhat.atlassian.net/browse/OCMUI-1414) | [ROSA WIZARD] validation related to the absen | Bug | Normal | Critical |  |
-| 63 | [OCMUI-974](https://redhat.atlassian.net/browse/OCMUI-974) | [OCM-UI] There is no error message for label  | Bug | Normal | Critical |  |
-| 63 | [OCMUI-675](https://redhat.atlassian.net/browse/OCMUI-675) | [OCM-UI]"Administrator acknowledgement was re | Bug | Normal | Critical |  |
-| 61 | [OCMUI-3859](https://redhat.atlassian.net/browse/OCMUI-3859) | Status in the Hybrid Cloud Console seems to f | Bug | Normal | Critical |  |
-| 60 | [OCMUI-879](https://redhat.atlassian.net/browse/OCMUI-879) | Cypress tests related to AMS | Story | Major | Critical |  |
-| 59 | [OCMUI-934](https://redhat.atlassian.net/browse/OCMUI-934) | OpenShift cluster monitoring operator link br | Bug | Minor | Major |  |
-| 59 | [OCMUI-778](https://redhat.atlassian.net/browse/OCMUI-778) | Rosa installation : AZs not aligned with regi | Bug | Normal | Major |  |
-| 59 | [OCMUI-734](https://redhat.atlassian.net/browse/OCMUI-734) | ROSA clusters deleted from the OCP/AWS consol | Bug | Normal | Major |  |
-| 59 | [OCMUI-630](https://redhat.atlassian.net/browse/OCMUI-630) | [OCM Accessibility] Cannot choose the upgrade | Bug | Minor | Major |  |
-| 58 | [OCMUI-3920](https://redhat.atlassian.net/browse/OCMUI-3920) | OCM UI: [Rosa] Verify support for nodepool au | Story | Major | Major |  |
-| 57 | [OCMUI-729](https://redhat.atlassian.net/browse/OCMUI-729) | [OCM UI] A "Cluster Autoscaler Editor" role a | Bug | Major | Major |  |
-| 57 | [OCMUI-710](https://redhat.atlassian.net/browse/OCMUI-710) | [ROSA Hypershift] Wrong control plane Y-strea | Bug | Major | Major |  |
-| 56 | [OCMUI-3998](https://redhat.atlassian.net/browse/OCMUI-3998) | OCM UI: Change the severity labels | Epic | Normal | Major |  |
-| 56 | [OCMUI-2305](https://redhat.atlassian.net/browse/OCMUI-2305) | Ship the `oc`  client tool / installer  versi | Feature | Normal | Major |  |
-| 55 | [OCMUI-1197](https://redhat.atlassian.net/browse/OCMUI-1197) | [OCM-UI]: Select a VPC to install you cluster | Bug | Minor | Major |  |
-| 55 | [OCMUI-719](https://redhat.atlassian.net/browse/OCMUI-719) | Confusing UX when viewing IPI (Automated), UP | Bug | Minor | Major |  |
-| 54 | [OCMUI-4080](https://redhat.atlassian.net/browse/OCMUI-4080) | Prepare console.redhat.com for OpenShift 5 | Epic | Undefined | Major |  |
-| 54 | [OCMUI-2840](https://redhat.atlassian.net/browse/OCMUI-2840) | [Cluster details] Two expiration alerts are d | Bug | Normal | Major |  |
-| 53 | [OCMUI-3181](https://redhat.atlassian.net/browse/OCMUI-3181) | [RFE] Hyperlink to the customer portal suppor | Story | Normal | Major |  |
-| 52 | [OCMUI-4622](https://redhat.atlassian.net/browse/OCMUI-4622) | subnet selection is problematic | Bug | Major | Major |  |
-| 52 | [OCMUI-4358](https://redhat.atlassian.net/browse/OCMUI-4358) | OSD/GCP WIF doesn't have the ability to chang | Bug | Major | Major |  |
-| 52 | [OCMUI-3103](https://redhat.atlassian.net/browse/OCMUI-3103) | control plane scaling notice in UI needs true | Bug | Major | Major |  |
+| Score | Ticket | Summary | Type | Current | Suggested |
+|:-----:|--------|---------|------|---------|-----------|
+| 85 | [OCMUI-4158](https://redhat.atlassian.net/browse/OCMUI-4158) | Block cluster transfers for Assisted Installe | Story | Normal | Blocker |
+| 84 | [OCMUI-4516](https://redhat.atlassian.net/browse/OCMUI-4516) | OCM only recognize Sockets or Cores/vCPUs as  | Bug | Major | Blocker |
+| 79 | [OCMUI-4519](https://redhat.atlassian.net/browse/OCMUI-4519) | Contradiction between Console and EA | Bug | Major | Critical |
+| 79 | [OCMUI-3997](https://redhat.atlassian.net/browse/OCMUI-3997) | openshift-install download links use mirror.o | Bug | Major | Critical |
+| 76 | [OCMUI-4732](https://redhat.atlassian.net/browse/OCMUI-4732) | CVE-2026-52845 uhc-portal: Caddy: Remote clie | Vulnerability | Critical | Critical |
+| 76 | [OCMUI-790](https://redhat.atlassian.net/browse/OCMUI-790) | Cluster autoscaler: workaround since API does | Bug | Normal | Critical |
+| 72 | [OCMUI-3956](https://redhat.atlassian.net/browse/OCMUI-3956) | Mexico Region doesn't appear as an enabled re | Bug | Major | Critical |
+| 69 | [OCMUI-1782](https://redhat.atlassian.net/browse/OCMUI-1782) | Version operator is in failed state after clu | Bug | Normal | Critical |
+| 64 | [OCMUI-4080](https://redhat.atlassian.net/browse/OCMUI-4080) | Prepare console.redhat.com for OpenShift 5 | Epic | Critical | Critical |
+| 63 | [OCMUI-1414](https://redhat.atlassian.net/browse/OCMUI-1414) | [ROSA WIZARD] validation related to the absen | Bug | Normal | Critical |
+| 63 | [OCMUI-974](https://redhat.atlassian.net/browse/OCMUI-974) | [OCM-UI] There is no error message for label  | Bug | Normal | Critical |
+| 63 | [OCMUI-675](https://redhat.atlassian.net/browse/OCMUI-675) | [OCM-UI]"Administrator acknowledgement was re | Bug | Normal | Critical |
+| 61 | [OCMUI-3859](https://redhat.atlassian.net/browse/OCMUI-3859) | Status in the Hybrid Cloud Console seems to f | Bug | Normal | Critical |
+| 60 | [OCMUI-879](https://redhat.atlassian.net/browse/OCMUI-879) | Cypress tests related to AMS | Story | Major | Critical |
+| 59 | [OCMUI-934](https://redhat.atlassian.net/browse/OCMUI-934) | OpenShift cluster monitoring operator link br | Bug | Minor | Major |
+| 59 | [OCMUI-778](https://redhat.atlassian.net/browse/OCMUI-778) | Rosa installation : AZs not aligned with regi | Bug | Normal | Major |
+| 59 | [OCMUI-734](https://redhat.atlassian.net/browse/OCMUI-734) | ROSA clusters deleted from the OCP/AWS consol | Bug | Normal | Major |
+| 59 | [OCMUI-630](https://redhat.atlassian.net/browse/OCMUI-630) | [OCM Accessibility] Cannot choose the upgrade | Bug | Minor | Major |
+| 58 | [OCMUI-3920](https://redhat.atlassian.net/browse/OCMUI-3920) | OCM UI: [Rosa] Verify support for nodepool au | Story | Major | Major |
+| 57 | [OCMUI-729](https://redhat.atlassian.net/browse/OCMUI-729) | [OCM UI] A "Cluster Autoscaler Editor" role a | Bug | Major | Major |
+| 57 | [OCMUI-710](https://redhat.atlassian.net/browse/OCMUI-710) | [ROSA Hypershift] Wrong control plane Y-strea | Bug | Major | Major |
+| 56 | [OCMUI-3998](https://redhat.atlassian.net/browse/OCMUI-3998) | OCM UI: Change the severity labels | Epic | Normal | Major |
+| 56 | [OCMUI-2305](https://redhat.atlassian.net/browse/OCMUI-2305) | Ship the `oc`  client tool / installer  versi | Feature | Normal | Major |
+| 55 | [OCMUI-1197](https://redhat.atlassian.net/browse/OCMUI-1197) | [OCM-UI]: Select a VPC to install you cluster | Bug | Minor | Major |
+| 55 | [OCMUI-719](https://redhat.atlassian.net/browse/OCMUI-719) | Confusing UX when viewing IPI (Automated), UP | Bug | Minor | Major |
+| 54 | [OCMUI-4375](https://redhat.atlassian.net/browse/OCMUI-4375) | Cluster list filters always split across mult | Bug | Normal | Major |
+| 54 | [OCMUI-2840](https://redhat.atlassian.net/browse/OCMUI-2840) | [Cluster details] Two expiration alerts are d | Bug | Normal | Major |
+| 53 | [OCMUI-3181](https://redhat.atlassian.net/browse/OCMUI-3181) | [RFE] Hyperlink to the customer portal suppor | Story | Normal | Major |
+| 52 | [OCMUI-4622](https://redhat.atlassian.net/browse/OCMUI-4622) | subnet selection is problematic | Bug | Major | Major |
+| 52 | [OCMUI-4358](https://redhat.atlassian.net/browse/OCMUI-4358) | OSD/GCP WIF doesn't have the ability to chang | Bug | Major | Major |
 
 ### Priority Mismatches (suggested differs from current Jira Priority)
 
 | Ticket | Summary | Current | Suggested | Score |
 |--------|---------|---------|-----------|:-----:|
+| [OCMUI-4158](https://redhat.atlassian.net/browse/OCMUI-4158) | Block cluster transfers for Assisted Installe | Normal | Blocker | 85 |
 | [OCMUI-4516](https://redhat.atlassian.net/browse/OCMUI-4516) | OCM only recognize Sockets or Cores/vCPUs as  | Major | Blocker | 84 |
 | [OCMUI-4519](https://redhat.atlassian.net/browse/OCMUI-4519) | Contradiction between Console and EA | Major | Critical | 79 |
 | [OCMUI-3997](https://redhat.atlassian.net/browse/OCMUI-3997) | openshift-install download links use mirror.o | Major | Critical | 79 |
+| [OCMUI-790](https://redhat.atlassian.net/browse/OCMUI-790) | Cluster autoscaler: workaround since API does | Normal | Critical | 76 |
 | [OCMUI-3956](https://redhat.atlassian.net/browse/OCMUI-3956) | Mexico Region doesn't appear as an enabled re | Major | Critical | 72 |
-| [OCMUI-4375](https://redhat.atlassian.net/browse/OCMUI-4375) | Cluster list filters always split across mult | Normal | Critical | 70 |
-| [OCMUI-4158](https://redhat.atlassian.net/browse/OCMUI-4158) | Block cluster transfers for Assisted Installe | Normal | Critical | 70 |
-| [OCMUI-790](https://redhat.atlassian.net/browse/OCMUI-790) | Cluster autoscaler: workaround since API does | Normal | Critical | 70 |
 | [OCMUI-1782](https://redhat.atlassian.net/browse/OCMUI-1782) | Version operator is in failed state after clu | Normal | Critical | 69 |
 | [OCMUI-1414](https://redhat.atlassian.net/browse/OCMUI-1414) | [ROSA WIZARD] validation related to the absen | Normal | Critical | 63 |
 | [OCMUI-974](https://redhat.atlassian.net/browse/OCMUI-974) | [OCM-UI] There is no error message for label  | Normal | Critical | 63 |
@@ -287,7 +210,7 @@ None found.
 | [OCMUI-2305](https://redhat.atlassian.net/browse/OCMUI-2305) | Ship the `oc`  client tool / installer  versi | Normal | Major | 56 |
 | [OCMUI-1197](https://redhat.atlassian.net/browse/OCMUI-1197) | [OCM-UI]: Select a VPC to install you cluster | Minor | Major | 55 |
 | [OCMUI-719](https://redhat.atlassian.net/browse/OCMUI-719) | Confusing UX when viewing IPI (Automated), UP | Minor | Major | 55 |
-| [OCMUI-4080](https://redhat.atlassian.net/browse/OCMUI-4080) | Prepare console.redhat.com for OpenShift 5 | Undefined | Major | 54 |
+| [OCMUI-4375](https://redhat.atlassian.net/browse/OCMUI-4375) | Cluster list filters always split across mult | Normal | Major | 54 |
 | [OCMUI-2840](https://redhat.atlassian.net/browse/OCMUI-2840) | [Cluster details] Two expiration alerts are d | Normal | Major | 54 |
 | [OCMUI-3181](https://redhat.atlassian.net/browse/OCMUI-3181) | [RFE] Hyperlink to the customer portal suppor | Normal | Major | 53 |
 | [OCMUI-3858](https://redhat.atlassian.net/browse/OCMUI-3858) | Alerts and Recommendations not expanded by de | Normal | Major | 51 |
@@ -300,12 +223,13 @@ None found.
 | [OCMUI-2086](https://redhat.atlassian.net/browse/OCMUI-2086) | [OCM-UI] Unknown error is displayed when the  | Minor | Major | 50 |
 | [OCMUI-1829](https://redhat.atlassian.net/browse/OCMUI-1829) | Metal IPI for multi console.redhat.com create | Minor | Major | 50 |
 | [OCMUI-186](https://redhat.atlassian.net/browse/OCMUI-186) | One step registration flow for OCM users | Normal | Major | 49 |
-| [OCMUI-2738](https://redhat.atlassian.net/browse/OCMUI-2738) | [SPIKE] Increase nodejs version to 22 | Normal | Major | 48 |
 | [OCMUI-2343](https://redhat.atlassian.net/browse/OCMUI-2343) | Clusters resuming from Hibernate continue to  | Normal | Major | 48 |
 | [OCMUI-753](https://redhat.atlassian.net/browse/OCMUI-753) | [OCM-UI] Alignment of context menu options ne | Normal | Major | 48 |
 | [OCMUI-708](https://redhat.atlassian.net/browse/OCMUI-708) | Cluster Archives webpage is stuck in loading  | Normal | Major | 48 |
 | [OCMUI-3527](https://redhat.atlassian.net/browse/OCMUI-3527) | [Security groups] Refresh button is not inlin | Minor | Major | 47 |
 | [OCMUI-1706](https://redhat.atlassian.net/browse/OCMUI-1706) | Hybrid cloud console is redirecting customers | Minor | Major | 47 |
+| [OCMUI-941](https://redhat.atlassian.net/browse/OCMUI-941) | logVerbosity value must be between 1 and 6 is | Minor | Major | 47 |
+| [OCMUI-2422](https://redhat.atlassian.net/browse/OCMUI-2422) | [OCM-UI] Uninstallation logs are not shown fo | Normal | Major | 46 |
 
 
 ---

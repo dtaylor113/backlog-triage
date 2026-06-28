@@ -238,6 +238,16 @@ def score_ticket(ticket, dev_emails, qe_emails):
         "blocks_external": score_blocks_external(ticket),
     }
 
+    age_months = compute_age_months(ticket["created"])
+    comment_count = ticket.get("comment_count", 0)
+    breakdown_details = {
+        "comments": str(comment_count),
+        "priority_field": ticket.get("priority", "Normal"),
+        "age_activity": f"{age_months:.0f}mo, {comment_count}c",
+        "watchers": str(ticket.get("watch_count", 0)),
+        "linked_epic": ticket.get("parent_status", ""),
+    }
+
     base_score = sum(breakdown.values())
     bonus = compute_bonus_modifiers(ticket)
     total = base_score + bonus
@@ -248,6 +258,7 @@ def score_ticket(ticket, dev_emails, qe_emails):
     return {
         "score": total,
         "breakdown": breakdown,
+        "breakdown_details": breakdown_details,
         "bonus": bonus,
         "suggested_label": suggested_label,
     }
@@ -280,6 +291,7 @@ def main():
             "updated": ticket["updated"],
             "score": result["score"],
             "breakdown": result["breakdown"],
+            "breakdown_details": result["breakdown_details"],
             "bonus": result["bonus"],
             "suggested_label": result["suggested_label"],
             "current_priority": ticket["priority"],

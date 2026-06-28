@@ -112,6 +112,19 @@ th .resize-handle:hover, th .resize-handle.active { background: #60a5fa; }
 .score-bar {
   display: inline-block; height: 8px; border-radius: 4px; vertical-align: middle;
 }
+.score-cell {
+  position: relative; cursor: default;
+}
+.score-tip {
+  display: none; position: absolute; z-index: 1000; bottom: 100%; left: 50%;
+  transform: translateX(-50%); margin-bottom: 6px; padding: 8px 12px;
+  background: #1e293b; color: #e2e8f0; border-radius: 6px; font-size: 11px;
+  white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.3); pointer-events: none;
+}
+.score-tip .tip-row { display: flex; justify-content: space-between; gap: 12px; }
+.score-tip .tip-val { font-weight: 600; flex-shrink: 0; }
+.score-tip .tip-total { border-top: 1px solid #475569; font-weight: 700; padding-top: 2px; margin-top: 2px; }
+.score-cell:hover .score-tip { display: block; }
 
 .info-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -329,6 +342,35 @@ function scoreColor(score) {
 }
 
 
+const BREAKDOWN_LABELS = {
+  reporter: 'Reporter source',
+  comments: 'Comment activity',
+  priority_field: 'Jira priority field',
+  age_activity: 'Age & activity',
+  linked_epic: 'Linked to epic',
+  customer_facing: 'Customer-facing',
+  watchers: 'Watchers',
+  lifecycle_frozen: 'Lifecycle frozen',
+  security: 'CVE / Security',
+  escalation_link: 'Customer escalation',
+  blocks_external: 'Blocks external team'
+};
+
+function scoreBreakdownTip(s) {
+  const bd = s.breakdown || {};
+  const details = s.breakdown_details || {};
+  const rows = Object.entries(bd)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => {
+      const detail = details[k] ? ` <span style="opacity:.6">(${esc(details[k])})</span>` : '';
+      return `<div class="tip-row"><span>${BREAKDOWN_LABELS[k] || k}${detail}</span><span class="tip-val">+${v}</span></div>`;
+    })
+    .join('');
+  const bonusRow = s.bonus ? `<div class="tip-row"><span>Recent bug bonus</span><span class="tip-val">+${s.bonus}</span></div>` : '';
+  return `<div class="score-tip">${rows}${bonusRow}<div class="tip-row tip-total"><span>Total</span><span class="tip-val">${s.score}</span></div></div>`;
+}
+
 function priorityBadge(label) {
   const name = label.replace('suggested-priority-', '');
   return `<span class="badge badge-${name}">${name}</span>`;
@@ -476,7 +518,7 @@ function renderPrioritiesTab() {
     html += `<td>${esc(s.summary)}</td>`;
     html += `<td class="nowrap">${esc(s.sprint || '')}</td>`;
     html += `<td>${esc(s.current_priority)}</td>`;
-    html += `<td class="nowrap"><span class="score-bar" style="width:${barWidth}px;background:${color};"></span> ${s.score}</td>`;
+    html += `<td class="nowrap score-cell"><span class="score-bar" style="width:${barWidth}px;background:${color};"></span> ${s.score}${scoreBreakdownTip(s)}</td>`;
     html += `<td>${priorityBadge(s.suggested_label)}</td>`;
     if (hasAccepted) {
       const origPriorityDisplay = origLabel.replace('triage-original-priority-', '');
@@ -1042,6 +1084,12 @@ function initAllTables() {
   });
 }
 
+function getCellSortValue(cell) {
+  const clone = cell.cloneNode(true);
+  clone.querySelectorAll('.score-tip').forEach(el => el.remove());
+  return clone.textContent.trim();
+}
+
 function sortTable(table, colIdx, th) {
   const tbody = table.querySelector('tbody');
   if (!tbody) return;
@@ -1070,8 +1118,10 @@ function sortTable(table, colIdx, th) {
 
   const dateRe = /^\d{4}-\d{2}-\d{2}/;
   rows.sort((a, b) => {
-    let aVal = a.cells[colIdx]?.textContent.trim() || '';
-    let bVal = b.cells[colIdx]?.textContent.trim() || '';
+    const aCell = a.cells[colIdx];
+    const bCell = b.cells[colIdx];
+    let aVal = aCell ? getCellSortValue(aCell) : '';
+    let bVal = bCell ? getCellSortValue(bCell) : '';
     const aDate = aVal.match(dateRe);
     const bDate = bVal.match(dateRe);
     if (aDate && bDate) {
