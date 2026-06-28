@@ -853,9 +853,8 @@ function renderHistoryTab() {
     closeLog.forEach(r => {
       const weekStart = getWeekStart(r.date || '');
       byWeek[weekStart] = byWeek[weekStart] || { orphan: 0, duplicate: 0, total: 0 };
-      if ((r.label || '').includes('orphan')) byWeek[weekStart].orphan++;
-      else if ((r.label || '').includes('duplicate')) byWeek[weekStart].duplicate++;
-      byWeek[weekStart].total++;
+      if ((r.label || '').includes('orphan')) { byWeek[weekStart].orphan++; byWeek[weekStart].total++; }
+      else if ((r.label || '').includes('duplicate')) { byWeek[weekStart].duplicate++; byWeek[weekStart].total++; }
     });
 
     const weeks = Object.keys(byWeek).sort();
