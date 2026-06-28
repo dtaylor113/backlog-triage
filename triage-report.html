@@ -432,6 +432,7 @@ function renderPrioritiesTab() {
     {name: 'Current'},
     {name: 'Priority Score', info: 'score-info'},
     {name: 'Suggested', info: 'suggested-info'},
+    {name: 'Assigned'},
     {name: 'Reporter'},
     {name: 'Comments'},
     {name: 'Last Updated'},
@@ -484,6 +485,7 @@ function renderPrioritiesTab() {
     } else {
       html += `<td class="priority-revert-col"></td>`;
     }
+    html += `<td>${esc(s.assignee || '')}</td>`;
     html += `<td>${esc(s.reporter_email.split('@')[0] || s.reporter_name || '')}</td>`;
     html += `<td>${s.comment_count}</td>`;
     html += `<td class="nowrap">${(s.updated || '').slice(0, 10)}</td>`;

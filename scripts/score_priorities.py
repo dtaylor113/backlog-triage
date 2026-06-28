@@ -273,6 +273,7 @@ def main():
             "status": ticket["status"],
             "priority": ticket["priority"],
             "sprint": ticket.get("sprint", ""),
+            "assignee": ticket.get("assignee", ""),
             "reporter_email": ticket["reporter_email"],
             "comment_count": ticket["comment_count"],
             "created": ticket["created"],
