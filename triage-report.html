@@ -428,6 +428,7 @@ function renderPrioritiesTab() {
     {name: 'Type'},
     {name: 'Key'},
     {name: 'Summary'},
+    {name: 'Sprint'},
     {name: 'Current'},
     {name: 'Priority Score', info: 'score-info'},
     {name: 'Suggested', info: 'suggested-info'},
@@ -473,6 +474,7 @@ function renderPrioritiesTab() {
     html += `<td>${esc(s.type)}</td>`;
     html += `<td class="nowrap">${jiraLink(s.key)}</td>`;
     html += `<td>${esc(s.summary)}</td>`;
+    html += `<td class="nowrap">${esc(s.sprint || '')}</td>`;
     html += `<td>${esc(s.current_priority)}</td>`;
     html += `<td class="nowrap"><span class="score-bar" style="width:${barWidth}px;background:${color};"></span> ${s.score}</td>`;
     html += `<td>${priorityBadge(s.suggested_label)}</td>`;
