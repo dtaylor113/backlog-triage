@@ -54,6 +54,21 @@ def get_auth():
     return (email, token)
 
 
+def get_ticket_status(key, auth):
+    """Fetch the current status of a ticket. Returns (status_name, labels) or (None, [])."""
+    url = f"https://{JIRA_INSTANCE}/rest/api/3/issue/{key}?fields=status,labels"
+    resp = requests.get(url, auth=auth)
+    if resp.status_code == 429:
+        time.sleep(int(resp.headers.get("Retry-After", 5)))
+        resp = requests.get(url, auth=auth)
+    if resp.status_code != 200:
+        return None, []
+    data = resp.json()
+    status = data.get("fields", {}).get("status", {}).get("name", "")
+    labels = data.get("fields", {}).get("labels", [])
+    return status, labels
+
+
 def add_label(key, label, auth):
     """Add a triage-closed label and remove any prior triage-reverted label."""
     url = f"https://{JIRA_INSTANCE}/rest/api/3/issue/{key}"
@@ -66,7 +81,9 @@ def add_label(key, label, auth):
 
 
 def transition_to_closed(key, resolution_name, auth):
-    """Transition a ticket to Closed with specified resolution."""
+    """Transition a ticket to Closed with specified resolution.
+    Falls back to transition without resolution if the workflow screen
+    doesn't support the resolution field."""
     url = f"https://{JIRA_INSTANCE}/rest/api/3/issue/{key}/transitions"
     resolution_id = RESOLUTION_IDS.get(resolution_name)
     if not resolution_id:
@@ -83,6 +100,14 @@ def transition_to_closed(key, resolution_name, auth):
     if resp.status_code == 429:
         time.sleep(int(resp.headers.get("Retry-After", 5)))
         resp = requests.post(url, json=payload, auth=auth)
+
+    if resp.status_code == 400 and "resolution" in resp.text:
+        payload_no_res = {"transition": {"id": TRANSITION_CLOSED}}
+        resp = requests.post(url, json=payload_no_res, auth=auth)
+        if resp.status_code == 204:
+            print("(no-resolution fallback)", end=" ")
+            return True
+
     if resp.status_code != 204:
         print(f"  ERROR transitioning {key}: {resp.status_code} {resp.text[:200]}", file=sys.stderr)
         return False
@@ -167,6 +192,8 @@ def main():
     auth = get_auth()
     success = 0
     failed = 0
+    skipped = 0
+    closed_items = []
 
     for i, item in enumerate(items, 1):
         key = item["key"]
@@ -175,6 +202,14 @@ def main():
         reason = item["reason"]
 
         print(f"[{i}/{len(items)}] {key} → {resolution}...", end=" ")
+
+        status, labels = get_ticket_status(key, auth)
+        if status and status.lower() in ("closed", "done"):
+            if label not in labels:
+                add_label(key, label, auth)
+            print(f"SKIPPED (already {status})")
+            skipped += 1
+            continue
 
         ok_label = add_label(key, label, auth)
         if not ok_label:
@@ -189,12 +224,14 @@ def main():
         add_comment(key, reason, auth)
         print("OK")
         success += 1
+        closed_items.append(item)
         time.sleep(0.3)
 
-    print(f"\nDone: {success} closed, {failed} failed")
+    skip_msg = f", {skipped} skipped" if skipped else ""
+    print(f"\nDone: {success} closed, {failed} failed{skip_msg}")
 
-    if success > 0:
-        log_closures(items)
+    if closed_items:
+        log_closures(closed_items)
         print(f"Logged to: {CLOSE_LOG_FILE}")
 
 
